@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_type: string | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_type?: string | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_type?: string | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -166,35 +196,86 @@ export type Database = {
         Row: {
           address: string | null
           bank_account: string | null
+          city: string | null
           company_name: string
+          country: string | null
+          county: string | null
           created_at: string | null
           cui_cif: string | null
+          email: string | null
           id: string
           logo_url: string | null
+          phone: string | null
+          postal_code: string | null
           reg_com: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
           bank_account?: string | null
+          city?: string | null
           company_name: string
+          country?: string | null
+          county?: string | null
           created_at?: string | null
           cui_cif?: string | null
+          email?: string | null
           id: string
           logo_url?: string | null
+          phone?: string | null
+          postal_code?: string | null
           reg_com?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
           bank_account?: string | null
+          city?: string | null
           company_name?: string
+          country?: string | null
+          county?: string | null
           created_at?: string | null
           cui_cif?: string | null
+          email?: string | null
           id?: string
           logo_url?: string | null
+          phone?: string | null
+          postal_code?: string | null
           reg_com?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      saft_exports: {
+        Row: {
+          created_at: string | null
+          file_data: string
+          generated_at: string | null
+          id: string
+          period_from: string
+          period_to: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_data: string
+          generated_at?: string | null
+          id?: string
+          period_from: string
+          period_to: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_data?: string
+          generated_at?: string | null
+          id?: string
+          period_from?: string
+          period_to?: string
+          status?: string | null
+          user_id?: string
         }
         Relationships: []
       }

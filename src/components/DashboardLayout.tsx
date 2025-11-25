@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  FileBarChart
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,6 +67,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { href: "/clients", icon: Users, label: "Clienți" },
     { href: "/invoices", icon: FileText, label: "Facturi" },
     { href: "/team", icon: Users, label: "Echipă" },
+    { href: "/reports", icon: FileBarChart, label: "Rapoarte" },
     { href: "/settings", icon: Settings, label: "Setări" },
   ];
 

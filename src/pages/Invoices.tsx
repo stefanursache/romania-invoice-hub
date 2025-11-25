@@ -4,10 +4,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2 } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { exportToCSV } from "@/utils/exportUtils";
 
 interface Invoice {
   id: string;
@@ -15,6 +16,8 @@ interface Invoice {
   issue_date: string;
   due_date: string;
   status: string;
+  subtotal: number;
+  vat_amount: number;
   total: number;
   currency: string;
   clients: {
@@ -27,10 +30,26 @@ const Invoices = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("owner");
 
   useEffect(() => {
-    loadInvoices();
+    checkAuth();
   }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Check if user is an accountant
+    const { data: memberData } = await supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("member_user_id", user.id)
+      .maybeSingle();
+
+    setUserRole(memberData?.role || "owner");
+    loadInvoices();
+  };
 
   const loadInvoices = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -202,6 +221,23 @@ const Invoices = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    const exportData = invoices.map((invoice) => ({
+      invoice_number: invoice.invoice_number,
+      issue_date: invoice.issue_date,
+      due_date: invoice.due_date,
+      client_name: invoice.clients?.name || "Unknown",
+      status: invoice.status,
+      subtotal: Number(invoice.subtotal),
+      vat_amount: Number(invoice.vat_amount),
+      total: Number(invoice.total),
+      currency: invoice.currency || "RON",
+    }));
+
+    exportToCSV(exportData, `invoices_${new Date().toISOString().split('T')[0]}.csv`);
+    toast.success("Facturi exportate în CSV!");
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -220,12 +256,20 @@ const Invoices = () => {
             <h1 className="text-4xl font-bold mb-2">Facturi</h1>
             <p className="text-muted-foreground">Gestionează facturile tale</p>
           </div>
-          <Link to="/invoices/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Factură nouă
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportCSV}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export CSV
             </Button>
-          </Link>
+            {userRole === "owner" && (
+              <Link to="/invoices/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Factură nouă
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {invoices.length === 0 ? (

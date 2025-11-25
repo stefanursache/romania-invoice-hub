@@ -65,6 +65,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/clients", icon: Users, label: "Clienți" },
     { href: "/invoices", icon: FileText, label: "Facturi" },
+    { href: "/team", icon: Users, label: "Echipă" },
     { href: "/settings", icon: Settings, label: "Setări" },
   ];
 

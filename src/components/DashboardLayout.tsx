@@ -11,7 +11,8 @@ import {
   LogOut,
   Menu,
   X,
-  FileBarChart
+  FileBarChart,
+  BookOpen
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,6 +67,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/clients", icon: Users, label: "Clienți" },
     { href: "/invoices", icon: FileText, label: "Facturi" },
+    { href: "/chart-of-accounts", icon: BookOpen, label: "Plan de Conturi" },
     { href: "/team", icon: Users, label: "Echipă" },
     { href: "/reports", icon: FileBarChart, label: "Rapoarte" },
     { href: "/settings", icon: Settings, label: "Setări" },

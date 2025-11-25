@@ -24,6 +24,12 @@ interface SaftPayload {
     currencyCode: string;
     dateCreated: string;
   };
+  accounts: Array<{
+    accountID: string;
+    accountCode: string;
+    accountDescription: string;
+    accountType: string;
+  }>;
   customers: Array<{
     id: string;
     name: string;
@@ -51,6 +57,17 @@ interface SaftPayload {
       netAmount: number;
       taxAmount: number;
       grossAmount: number;
+    }>;
+  }>;
+  generalLedgerEntries: Array<{
+    transactionID: string;
+    transactionDate: string;
+    description: string;
+    lines: Array<{
+      recordID: string;
+      accountID: string;
+      debitAmount: number;
+      creditAmount: number;
     }>;
   }>;
 }
@@ -85,6 +102,17 @@ function buildSafTXml(payload: SaftPayload): string {
 
   // Master Files
   const masterFiles = root.ele('n1:MasterFiles');
+  
+  // General Ledger Accounts
+  if (payload.accounts.length > 0) {
+    payload.accounts.forEach(account => {
+      const accountNode = masterFiles.ele('n1:GeneralLedgerAccounts');
+      accountNode.ele('n1:AccountID').txt(account.accountID);
+      accountNode.ele('n1:AccountDescription').txt(account.accountDescription);
+      accountNode.ele('n1:StandardAccountID').txt(account.accountCode);
+      accountNode.ele('n1:AccountType').txt(account.accountType);
+    });
+  }
   
   // Customers
   if (payload.customers.length > 0) {
@@ -159,6 +187,47 @@ function buildSafTXml(payload: SaftPayload): string {
     });
   }
 
+  // General Ledger Entries
+  if (payload.generalLedgerEntries.length > 0) {
+    const generalLedger = root.ele('n1:GeneralLedgerEntries');
+    generalLedger.ele('n1:NumberOfEntries').txt(payload.generalLedgerEntries.length.toString());
+    
+    const totalDebit = payload.generalLedgerEntries.reduce((sum, entry) => 
+      sum + entry.lines.reduce((lineSum, line) => lineSum + line.debitAmount, 0), 0
+    );
+    const totalCredit = payload.generalLedgerEntries.reduce((sum, entry) => 
+      sum + entry.lines.reduce((lineSum, line) => lineSum + line.creditAmount, 0), 0
+    );
+    
+    generalLedger.ele('n1:TotalDebit').txt(totalDebit.toFixed(2));
+    generalLedger.ele('n1:TotalCredit').txt(totalCredit.toFixed(2));
+
+    payload.generalLedgerEntries.forEach(entry => {
+      const journalNode = generalLedger.ele('n1:Journal');
+      journalNode.ele('n1:JournalID').txt('1');
+      journalNode.ele('n1:Description').txt('General Journal');
+      
+      const transactionNode = journalNode.ele('n1:Transaction');
+      transactionNode.ele('n1:TransactionID').txt(entry.transactionID);
+      transactionNode.ele('n1:Period').txt(new Date(entry.transactionDate).getMonth() + 1 + '');
+      transactionNode.ele('n1:TransactionDate').txt(entry.transactionDate);
+      transactionNode.ele('n1:Description').txt(entry.description);
+      
+      entry.lines.forEach(line => {
+        const lineNode = transactionNode.ele('n1:Line');
+        lineNode.ele('n1:RecordID').txt(line.recordID);
+        lineNode.ele('n1:AccountID').txt(line.accountID);
+        
+        if (line.debitAmount > 0) {
+          lineNode.ele('n1:DebitAmount').txt(line.debitAmount.toFixed(2));
+        }
+        if (line.creditAmount > 0) {
+          lineNode.ele('n1:CreditAmount').txt(line.creditAmount.toFixed(2));
+        }
+      });
+    });
+  }
+
   return root.end({ prettyPrint: true });
 }
 
@@ -199,6 +268,17 @@ serve(async (req) => {
 
     if (profileError || !profile) {
       throw new Error('Company profile not found');
+    }
+
+    // Fetch chart of accounts
+    const { data: accounts, error: accountsError } = await supabaseClient
+      .from('accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('account_code');
+
+    if (accountsError) {
+      console.error('Error fetching accounts:', accountsError);
     }
 
     // Fetch customers (clients)
@@ -260,6 +340,12 @@ serve(async (req) => {
         currencyCode: 'RON',
         dateCreated: new Date().toISOString().split('T')[0],
       },
+      accounts: (accounts || []).map(account => ({
+        accountID: account.id,
+        accountCode: account.account_code,
+        accountDescription: account.account_name,
+        accountType: account.account_type || 'asset',
+      })),
       customers: (clients || []).map(client => ({
         id: client.id,
         name: client.name,
@@ -285,6 +371,36 @@ serve(async (req) => {
             taxAmount: parseFloat(item.vat_amount.toString()),
             grossAmount: parseFloat(item.total.toString()),
           })),
+        };
+      }),
+      generalLedgerEntries: (invoices || []).map((invoice, idx) => {
+        const items = (allItems || []).filter(item => item.invoice_id === invoice.id);
+        const lineIndex = idx * 2;
+        
+        return {
+          transactionID: invoice.id,
+          transactionDate: invoice.issue_date,
+          description: `Sales Invoice ${invoice.invoice_number}`,
+          lines: [
+            {
+              recordID: `${lineIndex + 1}`,
+              accountID: accounts?.find(a => a.account_code === '4111')?.id || 'default-receivable',
+              debitAmount: parseFloat(invoice.total.toString()),
+              creditAmount: 0,
+            },
+            {
+              recordID: `${lineIndex + 2}`,
+              accountID: accounts?.find(a => a.account_code === '707')?.id || 'default-revenue',
+              debitAmount: 0,
+              creditAmount: parseFloat(invoice.subtotal.toString()),
+            },
+            ...(parseFloat(invoice.vat_amount.toString()) > 0 ? [{
+              recordID: `${lineIndex + 3}`,
+              accountID: accounts?.find(a => a.account_code === '4427')?.id || 'default-vat',
+              debitAmount: 0,
+              creditAmount: parseFloat(invoice.vat_amount.toString()),
+            }] : []),
+          ],
         };
       }),
     };

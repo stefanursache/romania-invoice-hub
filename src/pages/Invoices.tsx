@@ -4,9 +4,10 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { generateInvoicePDF } from "@/utils/pdfGenerator";
 
 interface Invoice {
   id: string;
@@ -24,6 +25,8 @@ interface Invoice {
 const Invoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+  const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
 
   useEffect(() => {
     loadInvoices();
@@ -78,6 +81,124 @@ const Invoices = () => {
         return "Restanță";
       default:
         return status;
+    }
+  };
+
+  const handleDownloadPDF = async (invoiceId: string) => {
+    setDownloadingPdf(invoiceId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch invoice with all data
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          clients (
+            name,
+            cui_cif,
+            reg_com,
+            address,
+            email,
+            phone
+          )
+        `)
+        .eq("id", invoiceId)
+        .single();
+
+      if (invoiceError || !invoice) {
+        toast.error("Eroare la încărcarea facturii");
+        return;
+      }
+
+      // Fetch invoice items
+      const { data: items, error: itemsError } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", invoiceId);
+
+      if (itemsError) {
+        toast.error("Eroare la încărcarea liniilor");
+        return;
+      }
+
+      // Fetch user profile
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        toast.error("Eroare la încărcarea profilului");
+        return;
+      }
+
+      // Generate PDF
+      generateInvoicePDF(
+        {
+          ...invoice,
+          subtotal: Number(invoice.subtotal),
+          vat_amount: Number(invoice.vat_amount),
+          total: Number(invoice.total),
+          client: invoice.clients,
+          items: items.map((item) => ({
+            description: item.description,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unit_price),
+            vat_rate: item.vat_rate,
+            subtotal: Number(item.subtotal),
+            vat_amount: Number(item.vat_amount),
+            total: Number(item.total),
+          })),
+        },
+        profile
+      );
+
+      toast.success("PDF descărcat!");
+    } catch (error: any) {
+      toast.error("Eroare la generare PDF");
+      console.error(error);
+    } finally {
+      setDownloadingPdf(null);
+    }
+  };
+
+  const handleDownloadXML = async (invoiceId: string) => {
+    setDownloadingXml(invoiceId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Nu ești autentificat");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("generate-efactura-xml", {
+        body: { invoiceId },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      // Create blob and download
+      const blob = new Blob([response.data], { type: "application/xml" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `eFactura-${invoiceId}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("XML eFactura descărcat!");
+    } catch (error: any) {
+      toast.error("Eroare la generare XML");
+      console.error(error);
+    } finally {
+      setDownloadingXml(null);
     }
   };
 
@@ -152,15 +273,37 @@ const Invoices = () => {
                         {new Date(invoice.due_date).toLocaleDateString("ro-RO")}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between md:justify-end gap-4">
-                      <div>
-                        <p className="text-muted-foreground">Total</p>
-                        <p className="text-xl font-bold">
-                          {invoice.total.toFixed(2)} {invoice.currency}
-                        </p>
-                      </div>
-                      <Button size="sm" variant="outline">
-                        <Eye className="h-4 w-4" />
+                    <div>
+                      <p className="text-muted-foreground">Total</p>
+                      <p className="text-xl font-bold">
+                        {invoice.total.toFixed(2)} {invoice.currency}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadPDF(invoice.id)}
+                        disabled={downloadingPdf === invoice.id}
+                      >
+                        {downloadingPdf === invoice.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadXML(invoice.id)}
+                        disabled={downloadingXml === invoice.id}
+                        title="Descarcă eFactura XML"
+                      >
+                        {downloadingXml === invoice.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <FileCode className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>

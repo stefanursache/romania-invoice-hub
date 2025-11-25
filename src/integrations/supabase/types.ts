@@ -198,15 +198,49 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          invited_at: string | null
+          member_user_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          workspace_owner_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          invited_at?: string | null
+          member_user_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          workspace_owner_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          invited_at?: string | null
+          member_user_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          workspace_owner_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_workspace_role: {
+        Args: { _user_id: string; _workspace_owner_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_workspace_access: {
+        Args: { _user_id: string; _workspace_owner_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "accountant"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -333,6 +367,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "accountant"],
+    },
   },
 } as const

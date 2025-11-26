@@ -10,6 +10,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Download, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { ro } from "date-fns/locale";
+import { 
+  validateProfileForSaftExport, 
+  validateRequiredAccountsForSaft,
+  showValidationErrors 
+} from "@/utils/xmlValidation";
 
 interface Profile {
   company_name: string;
@@ -125,8 +131,40 @@ const Reports = () => {
 
   const handleGenerate = async () => {
     if (!fromDate || !toDate) {
-      toast.error("Please select a valid period");
+      toast.error("Vă rugăm să selectați perioada pentru raport");
       return;
+    }
+
+    // Validate profile data
+    const profileValidation = validateProfileForSaftExport(profile);
+    if (!profileValidation.isValid) {
+      showValidationErrors(
+        profileValidation.errors,
+        "Date companie incomplete pentru SAF-T"
+      );
+      toast.info("Vă rugăm să completați datele companiei în Setări înainte de a genera raportul SAF-T");
+      return;
+    }
+
+    // Validate required accounts
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: accounts } = await supabase
+        .from("accounts")
+        .select("account_code")
+        .eq("user_id", user.id);
+
+      if (accounts) {
+        const accountsValidation = validateRequiredAccountsForSaft(accounts);
+        if (!accountsValidation.isValid) {
+          showValidationErrors(
+            accountsValidation.errors,
+            "Conturi contabile lipsă pentru SAF-T"
+          );
+          toast.info("Vă rugăm să adăugați conturile obligatorii în Plan de conturi");
+          return;
+        }
+      }
     }
 
     setGenerating(true);

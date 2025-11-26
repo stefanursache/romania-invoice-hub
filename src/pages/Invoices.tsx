@@ -10,6 +10,12 @@ import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { exportToCSV } from "@/utils/exportUtils";
 import { InvoiceImageUpload } from "@/components/InvoiceImageUpload";
+import { 
+  validateProfileForEFactura, 
+  validateClientForEFactura,
+  validateInvoiceForEFactura,
+  showValidationErrors 
+} from "@/utils/xmlValidation";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface Invoice {
@@ -190,10 +196,90 @@ const Invoices = () => {
 
   const handleDownloadXML = async (invoiceId: string) => {
     setDownloadingXml(invoiceId);
+    
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Nu ești autentificat");
+        setDownloadingXml(null);
+        return;
+      }
+
+      // Fetch invoice and related data for validation
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          clients (*)
+        `)
+        .eq("id", invoiceId)
+        .single();
+
+      if (invoiceError || !invoiceData) {
+        throw new Error("Eroare la încărcarea datelor facturii");
+      }
+
+      // Fetch invoice items
+      const { data: items, error: itemsError } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", invoiceId);
+
+      if (itemsError) {
+        throw new Error("Eroare la încărcarea produselor/serviciilor");
+      }
+
+      // Fetch profile
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Eroare la încărcarea profilului companiei");
+      }
+
+      // Validate profile
+      const profileValidation = validateProfileForEFactura(profile);
+      if (!profileValidation.isValid) {
+        showValidationErrors(
+          profileValidation.errors,
+          "Date companie incomplete pentru e-Factura"
+        );
+        toast.info("Vă rugăm să completați datele companiei în Setări");
+        setDownloadingXml(null);
+        return;
+      }
+
+      // Validate client
+      const clientValidation = validateClientForEFactura(invoiceData.clients);
+      if (!clientValidation.isValid) {
+        showValidationErrors(
+          clientValidation.errors,
+          "Date client incomplete pentru e-Factura"
+        );
+        toast.info("Vă rugăm să completați datele clientului");
+        setDownloadingXml(null);
+        return;
+      }
+
+      // Validate invoice
+      const invoiceValidation = validateInvoiceForEFactura(invoiceData, items || []);
+      if (!invoiceValidation.isValid) {
+        showValidationErrors(
+          invoiceValidation.errors,
+          "Date factură incomplete pentru e-Factura"
+        );
+        setDownloadingXml(null);
+        return;
+      }
+
+      // All validations passed, proceed with generation
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Nu ești autentificat");
+        setDownloadingXml(null);
         return;
       }
 

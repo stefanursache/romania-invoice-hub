@@ -296,9 +296,9 @@ const Index = () => {
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Termeni și condiții</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Confidențialitate</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">GDPR</a></li>
+                <li><Link to="/terms" className="hover:text-foreground transition-colors">Termeni și condiții</Link></li>
+                <li><Link to="/privacy" className="hover:text-foreground transition-colors">Confidențialitate</Link></li>
+                <li><Link to="/gdpr" className="hover:text-foreground transition-colors">GDPR</Link></li>
               </ul>
             </div>
           </div>

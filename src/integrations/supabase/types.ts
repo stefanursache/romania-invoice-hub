@@ -416,6 +416,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_business_user_by_email: {
+        Args: { user_email: string }
+        Returns: {
+          company_name: string
+          email: string
+          user_id: string
+        }[]
+      }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       get_workspace_role: {
         Args: { _user_id: string; _workspace_owner_id: string }

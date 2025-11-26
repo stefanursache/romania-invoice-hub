@@ -1,0 +1,4 @@
+-- Add field to track SPV submission
+ALTER TABLE public.invoices
+ADD COLUMN IF NOT EXISTS spv_sent_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS spv_status TEXT DEFAULT NULL;

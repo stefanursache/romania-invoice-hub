@@ -5,6 +5,7 @@ interface InvoiceStatusWorkflowProps {
   status: string;
   accountantApproved: boolean;
   approvalNotes?: string;
+  spvSentAt?: string | null;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ export const InvoiceStatusWorkflow = ({
   status, 
   accountantApproved,
   approvalNotes,
+  spvSentAt,
   className 
 }: InvoiceStatusWorkflowProps) => {
   
@@ -57,8 +59,8 @@ export const InvoiceStatusWorkflow = ({
       id: 'sent_to_spv',
       label: 'Trimisă la SPV',
       icon: <Send className="w-5 h-5" />,
-      completed: status === 'sent' && accountantApproved,
-      active: false,
+      completed: !!spvSentAt,
+      active: accountantApproved && !spvSentAt,
       rejected: false,
     },
   ];

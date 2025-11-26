@@ -364,6 +364,8 @@ export type Database = {
           invoice_type: string | null
           issue_date: string
           notes: string | null
+          spv_sent_at: string | null
+          spv_status: string | null
           status: string
           subtotal: number
           total: number
@@ -385,6 +387,8 @@ export type Database = {
           invoice_type?: string | null
           issue_date?: string
           notes?: string | null
+          spv_sent_at?: string | null
+          spv_status?: string | null
           status?: string
           subtotal?: number
           total?: number
@@ -406,6 +410,8 @@ export type Database = {
           invoice_type?: string | null
           issue_date?: string
           notes?: string | null
+          spv_sent_at?: string | null
+          spv_status?: string | null
           status?: string
           subtotal?: number
           total?: number

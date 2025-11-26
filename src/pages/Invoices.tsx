@@ -77,16 +77,21 @@ const Invoices = () => {
     console.log("🔐 Current user ID:", user.id);
 
     // Check if user is an accountant
-    const { data: memberData } = await supabase
+    const { data: memberData, error: memberError } = await supabase
       .from("workspace_members")
       .select("role, workspace_owner_id")
       .eq("member_user_id", user.id)
       .maybeSingle();
 
+    if (memberError) {
+      console.error("❌ Error fetching workspace member:", memberError);
+    }
     console.log("👥 Workspace member data:", memberData);
 
-    const detectedRole = memberData?.role || "owner";
+    // Explicitly check if role is 'accountant' from the enum
+    const detectedRole = (memberData?.role === "accountant") ? "accountant" : "owner";
     console.log("🎭 Detected role:", detectedRole);
+    console.log("🎭 Role type:", typeof detectedRole, detectedRole);
     
     setUserRole(detectedRole);
     

@@ -48,7 +48,7 @@ serve(async (req) => {
   }
 
   try {
-    const { invoiceId } = await req.json();
+    const { invoiceId, workspaceOwnerId } = await req.json();
 
     if (!invoiceId) {
       throw new Error("Invoice ID is required");
@@ -75,6 +75,26 @@ serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
+    // Determine the target user ID (company owner)
+    let targetUserId = user.id;
+    
+    // If workspaceOwnerId is provided, verify accountant has access
+    if (workspaceOwnerId) {
+      const { data: access } = await supabase
+        .from('workspace_members')
+        .select('id')
+        .eq('member_user_id', user.id)
+        .eq('workspace_owner_id', workspaceOwnerId)
+        .single();
+      
+      if (!access) {
+        throw new Error('You do not have access to this workspace');
+      }
+      
+      targetUserId = workspaceOwnerId;
+      console.log(`Accountant ${user.id} generating e-Factura for company ${targetUserId}`);
+    }
+
     // Fetch invoice with related data
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
@@ -88,7 +108,7 @@ serve(async (req) => {
         )
       `)
       .eq("id", invoiceId)
-      .eq("user_id", user.id)
+      .eq("user_id", targetUserId)
       .single();
 
     if (invoiceError || !invoice) {
@@ -109,7 +129,7 @@ serve(async (req) => {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", user.id)
+      .eq("id", targetUserId)
       .single();
 
     if (profileError || !profile) {

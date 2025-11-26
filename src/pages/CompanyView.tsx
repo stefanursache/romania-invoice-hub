@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -72,6 +76,12 @@ const CompanyView = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [saftExports, setSaftExports] = useState<SaftExport[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [generatingSaft, setGeneratingSaft] = useState(false);
+  const [generatingEfactura, setGeneratingEfactura] = useState(false);
+  const [saftDialogOpen, setSaftDialogOpen] = useState(false);
+  const [saftPeriodFrom, setSaftPeriodFrom] = useState("");
+  const [saftPeriodTo, setSaftPeriodTo] = useState("");
+  const [selectedInvoiceForEfactura, setSelectedInvoiceForEfactura] = useState<string | null>(null);
 
   useEffect(() => {
     checkAccess();
@@ -216,6 +226,73 @@ const CompanyView = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateSaft = async () => {
+    if (!saftPeriodFrom || !saftPeriodTo) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    setGeneratingSaft(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-saft-xml', {
+        body: {
+          periodFrom: saftPeriodFrom,
+          periodTo: saftPeriodTo,
+          workspaceOwnerId: companyId
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.exportId) {
+        toast.success("SAF-T report generated successfully!");
+        setSaftDialogOpen(false);
+        await loadSaftExports();
+      }
+    } catch (error: any) {
+      console.error("Error generating SAF-T:", error);
+      toast.error(error.message || "Failed to generate SAF-T report");
+    } finally {
+      setGeneratingSaft(false);
+    }
+  };
+
+  const handleGenerateEfactura = async (invoiceId: string) => {
+    setGeneratingEfactura(true);
+    setSelectedInvoiceForEfactura(invoiceId);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-efactura-xml', {
+        body: {
+          invoiceId,
+          workspaceOwnerId: companyId
+        }
+      });
+
+      if (error) throw error;
+
+      // Create download link
+      const invoice = invoices.find(inv => inv.id === invoiceId);
+      const blob = new Blob([data], { type: "application/xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `eFactura-${invoice?.invoice_number || invoiceId}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("e-Factura generated successfully!");
+    } catch (error: any) {
+      console.error("Error generating e-Factura:", error);
+      toast.error(error.message || "Failed to generate e-Factura");
+    } finally {
+      setGeneratingEfactura(false);
+      setSelectedInvoiceForEfactura(null);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -432,6 +509,7 @@ const CompanyView = () => {
                         <TableHead>Due Date</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -448,6 +526,26 @@ const CompanyView = () => {
                           </TableCell>
                           <TableCell className="text-right font-semibold">
                             {invoice.total.toFixed(2)} {invoice.currency}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGenerateEfactura(invoice.id)}
+                              disabled={generatingEfactura && selectedInvoiceForEfactura === invoice.id}
+                            >
+                              {generatingEfactura && selectedInvoiceForEfactura === invoice.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                  e-Factura
+                                </>
+                              )}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -516,13 +614,64 @@ const CompanyView = () => {
           <TabsContent value="reports">
             <Card>
               <CardHeader>
-                <CardTitle>SAF-T XML Reports ({saftExports.length})</CardTitle>
-                <CardDescription>Generated SAF-T exports for ANAF compliance</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>SAF-T XML Reports ({saftExports.length})</CardTitle>
+                    <CardDescription>Generated SAF-T exports for ANAF compliance</CardDescription>
+                  </div>
+                  <Dialog open={saftDialogOpen} onOpenChange={setSaftDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Generate New SAF-T
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Generate SAF-T Report</DialogTitle>
+                        <DialogDescription>
+                          Select the reporting period for the SAF-T XML export
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="periodFrom">Period From</Label>
+                          <Input
+                            id="periodFrom"
+                            type="date"
+                            value={saftPeriodFrom}
+                            onChange={(e) => setSaftPeriodFrom(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="periodTo">Period To</Label>
+                          <Input
+                            id="periodTo"
+                            type="date"
+                            value={saftPeriodTo}
+                            onChange={(e) => setSaftPeriodTo(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setSaftDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleGenerateSaft} disabled={generatingSaft}>
+                          {generatingSaft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Generate SAF-T
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 {saftExports.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    No SAF-T exports found
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No SAF-T exports found</p>
+                    <p className="text-sm mt-2">Click "Generate New SAF-T" to create your first report</p>
                   </div>
                 ) : (
                   <div className="space-y-3">

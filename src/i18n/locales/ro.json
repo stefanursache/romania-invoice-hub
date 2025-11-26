@@ -142,6 +142,8 @@
   "settings": {
     "title": "Setări cont",
     "subtitle": "Gestionează informațiile companiei și securitatea contului",
+    "accountantNote": "Notă pentru Contabili:",
+    "accountantNoteDesc": "Acestea sunt setările contului tău personal. Pentru a vizualiza sau modifica informațiile unei companii client, mergi la pagina companiei respective.",
     "company": "Companie",
     "contact": "Contact",
     "security": "Securitate",

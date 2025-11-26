@@ -255,15 +255,35 @@ serve(async (req) => {
       throw new Error('Not authenticated');
     }
 
-    const { periodFrom, periodTo } = await req.json();
+    const { periodFrom, periodTo, workspaceOwnerId } = await req.json();
 
-    console.log(`Generating SAF-T for user ${user.id} from ${periodFrom} to ${periodTo}`);
+    // Determine the target user ID (company owner)
+    let targetUserId = user.id;
+    
+    // If workspaceOwnerId is provided, verify accountant has access
+    if (workspaceOwnerId) {
+      const { data: access } = await supabaseClient
+        .from('workspace_members')
+        .select('id')
+        .eq('member_user_id', user.id)
+        .eq('workspace_owner_id', workspaceOwnerId)
+        .single();
+      
+      if (!access) {
+        throw new Error('You do not have access to this workspace');
+      }
+      
+      targetUserId = workspaceOwnerId;
+      console.log(`Accountant ${user.id} generating SAF-T for company ${targetUserId}`);
+    }
+
+    console.log(`Generating SAF-T for user ${targetUserId} from ${periodFrom} to ${periodTo}`);
 
     // Fetch company profile
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', targetUserId)
       .single();
 
     if (profileError || !profile) {
@@ -274,7 +294,7 @@ serve(async (req) => {
     const { data: accounts, error: accountsError } = await supabaseClient
       .from('accounts')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .order('account_code');
 
     if (accountsError) {
@@ -298,7 +318,7 @@ serve(async (req) => {
     const { data: clients, error: clientsError } = await supabaseClient
       .from('clients')
       .select('*')
-      .eq('user_id', user.id);
+      .eq('user_id', targetUserId);
 
     if (clientsError) {
       throw new Error('Error fetching clients');
@@ -311,7 +331,7 @@ serve(async (req) => {
         *,
         client:clients(*)
       `)
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .gte('issue_date', periodFrom)
       .lte('issue_date', periodTo)
       .order('issue_date');
@@ -425,7 +445,7 @@ serve(async (req) => {
     const { data: exportRecord, error: exportError } = await supabaseClient
       .from('saft_exports')
       .insert({
-        user_id: user.id,
+        user_id: targetUserId,
         period_from: periodFrom,
         period_to: periodTo,
         file_data: xmlContent,

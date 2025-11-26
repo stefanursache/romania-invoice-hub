@@ -86,8 +86,10 @@ const Settings = () => {
       .maybeSingle();
 
     if (error) {
-      toast.error("Eroare la încărcarea profilului");
+      console.error("Settings: Error loading profile:", error);
+      toast.error(t("settings.errors.loadFailed") || "Failed to load profile");
     } else if (data) {
+      console.log("Settings: Profile loaded:", data);
       setProfile({
         company_name: data.company_name,
         cui_cif: data.cui_cif || "",
@@ -100,6 +102,8 @@ const Settings = () => {
         county: data.county || "",
         postal_code: data.postal_code || "",
       });
+    } else {
+      console.warn("Settings: No profile data found");
     }
     setLoading(false);
   };

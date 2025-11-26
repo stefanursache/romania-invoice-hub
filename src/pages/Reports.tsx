@@ -57,6 +57,8 @@ const Reports = () => {
   const loadData = async (userId: string) => {
     setLoading(true);
     try {
+      console.log("Reports: Loading data for user:", userId);
+      
       // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -64,7 +66,16 @@ const Reports = () => {
         .eq("id", userId)
         .maybeSingle();
 
+      console.log("Reports: Profile data:", profileData);
+      console.log("Reports: Profile error:", profileError);
+
       if (profileError) throw profileError;
+      
+      if (!profileData) {
+        console.warn("Reports: No profile found for user");
+        toast.error("Profile not found. Please update your profile in Settings.");
+      }
+      
       setProfile(profileData);
 
       // Load previous exports
@@ -74,10 +85,13 @@ const Reports = () => {
         .eq("user_id", userId)
         .order("generated_at", { ascending: false });
 
+      console.log("Reports: Exports data:", exportsData?.length || 0);
+      console.log("Reports: Exports error:", exportsError);
+
       if (exportsError) throw exportsError;
       setExports(exportsData || []);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Reports: Error loading data:", error);
       toast.error("Failed to load data");
     } finally {
       setLoading(false);

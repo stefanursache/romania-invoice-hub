@@ -424,6 +424,7 @@ export type Database = {
           email: string | null
           id: string
           logo_url: string | null
+          payment_plan: string | null
           phone: string | null
           postal_code: string | null
           reg_com: string | null
@@ -444,6 +445,7 @@ export type Database = {
           email?: string | null
           id: string
           logo_url?: string | null
+          payment_plan?: string | null
           phone?: string | null
           postal_code?: string | null
           reg_com?: string | null
@@ -464,6 +466,7 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          payment_plan?: string | null
           phone?: string | null
           postal_code?: string | null
           reg_com?: string | null

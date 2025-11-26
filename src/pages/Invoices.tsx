@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
@@ -37,8 +37,9 @@ interface Invoice {
 const Invoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
-  const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState<Record<string, boolean>>({});
+  const [downloadingXml, setDownloadingXml] = useState<Record<string, boolean>>({});
+  const [sendingToSpv, setSendingToSpv] = useState<Record<string, boolean>>({});
   const [userRole, setUserRole] = useState<string>("owner");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
 
@@ -114,7 +115,7 @@ const Invoices = () => {
   };
 
   const handleDownloadPDF = async (invoiceId: string) => {
-    setDownloadingPdf(invoiceId);
+    setDownloadingPdf((prev) => ({ ...prev, [invoiceId]: true }));
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -190,12 +191,12 @@ const Invoices = () => {
       toast.error("Eroare la generare PDF");
       console.error(error);
     } finally {
-      setDownloadingPdf(null);
+      setDownloadingPdf((prev) => ({ ...prev, [invoiceId]: false }));
     }
   };
 
   const handleDownloadXML = async (invoiceId: string) => {
-    setDownloadingXml(invoiceId);
+    setDownloadingXml((prev) => ({ ...prev, [invoiceId]: true }));
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -307,7 +308,34 @@ const Invoices = () => {
       toast.error("Eroare la generare XML");
       console.error(error);
     } finally {
-      setDownloadingXml(null);
+      setDownloadingXml((prev) => ({ ...prev, [invoiceId]: false }));
+    }
+  };
+
+  const handleSendToSPV = async (invoiceId: string) => {
+    setSendingToSpv((prev) => ({ ...prev, [invoiceId]: true }));
+    
+    try {
+      const response = await supabase.functions.invoke("send-to-spv", {
+        body: { invoiceId },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      if (response.data?.success) {
+        toast.success("Factură trimisă în SPV cu succes!");
+        // Reload invoices to update status
+        loadInvoices();
+      } else {
+        throw new Error(response.data?.error || "Eroare necunoscută");
+      }
+    } catch (error: any) {
+      console.error("Error sending to SPV:", error);
+      toast.error(error.message || "Eroare la trimitere în SPV");
+    } finally {
+      setSendingToSpv((prev) => ({ ...prev, [invoiceId]: false }));
     }
   };
 
@@ -439,9 +467,10 @@ const Invoices = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDownloadPDF(invoice.id)}
-                        disabled={downloadingPdf === invoice.id}
+                        disabled={downloadingPdf[invoice.id]}
+                        title="Descarcă PDF"
                       >
-                        {downloadingPdf === invoice.id ? (
+                        {downloadingPdf[invoice.id] ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Download className="h-4 w-4" />
@@ -451,15 +480,31 @@ const Invoices = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDownloadXML(invoice.id)}
-                        disabled={downloadingXml === invoice.id}
+                        disabled={downloadingXml[invoice.id]}
                         title="Descarcă eFactura XML"
                       >
-                        {downloadingXml === invoice.id ? (
+                        {downloadingXml[invoice.id] ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <FileCode className="h-4 w-4" />
                         )}
                       </Button>
+                      {userRole === "owner" && invoice.status !== "sent" && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleSendToSPV(invoice.id)}
+                          disabled={sendingToSpv[invoice.id]}
+                          title="Trimite în SPV"
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          {sendingToSpv[invoice.id] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

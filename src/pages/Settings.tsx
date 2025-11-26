@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Building2, KeyRound, User } from "lucide-react";
+import { Loader2, Building2, KeyRound, User, Cloud } from "lucide-react";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +23,8 @@ interface Profile {
   city: string | null;
   county: string | null;
   postal_code: string | null;
+  spv_client_id: string | null;
+  spv_client_secret: string | null;
 }
 
 const passwordSchema = z.object({
@@ -55,6 +57,8 @@ const Settings = () => {
     city: "",
     county: "",
     postal_code: "",
+    spv_client_id: "",
+    spv_client_secret: "",
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -101,6 +105,8 @@ const Settings = () => {
         city: data.city || "",
         county: data.county || "",
         postal_code: data.postal_code || "",
+        spv_client_id: data.spv_client_id || "",
+        spv_client_secret: data.spv_client_secret || "",
       });
     } else {
       console.warn("Settings: No profile data found");
@@ -225,11 +231,17 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue={userRole === "accountant" ? "account" : "company"} className="w-full">
-          <TabsList className={`grid w-full ${userRole === "accountant" ? "grid-cols-2" : "grid-cols-3"}`}>
+          <TabsList className={`grid w-full ${userRole === "accountant" ? "grid-cols-2" : "grid-cols-4"}`}>
             {userRole !== "accountant" && (
               <TabsTrigger value="company" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Companie
+              </TabsTrigger>
+            )}
+            {userRole !== "accountant" && (
+              <TabsTrigger value="spv" className="flex items-center gap-2">
+                <Cloud className="h-4 w-4" />
+                SPV / e-Factura
               </TabsTrigger>
             )}
             <TabsTrigger value="account" className="flex items-center gap-2">
@@ -352,6 +364,83 @@ const Settings = () => {
                     <Button type="submit" disabled={saving}>
                       {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Salvează modificările
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {userRole !== "accountant" && (
+            <TabsContent value="spv" className="space-y-4">
+              <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                  🔐 Cum să obții credențialele SPV ANAF
+                </h3>
+                <p className="text-sm text-amber-900 dark:text-amber-100 mb-3">
+                  Pentru a trimite automat facturile în Spațiul Privat Virtual (SPV) ANAF, trebuie să obții credențiale OAuth:
+                </p>
+                <ol className="text-sm text-amber-900 dark:text-amber-100 list-decimal list-inside space-y-2">
+                  <li>Accesează <a href="https://www.anaf.ro" target="_blank" rel="noopener noreferrer" className="underline font-semibold">portalul ANAF</a> cu certificatul digital al firmei</li>
+                  <li>Mergi la secțiunea <strong>Spațiul Privat Virtual</strong> → <strong>API REST</strong></li>
+                  <li>Solicită acces API pentru <strong>e-Factura</strong></li>
+                  <li>După aprobare (2-5 zile lucrătoare), vei primi <strong>Client ID</strong> și <strong>Client Secret</strong></li>
+                  <li>Introdu credențialele mai jos pentru integrare automată</li>
+                </ol>
+                <p className="text-xs text-amber-900 dark:text-amber-100 mt-3">
+                  💡 <strong>Tip:</strong> Credențialele sunt stocate securizat și criptate. Doar tu ai acces la ele.
+                </p>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Integrare SPV / e-Factura ANAF</CardTitle>
+                  <CardDescription>Configurează trimiterea automată a facturilor în SPV</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="spv_client_id">Client ID OAuth ANAF</Label>
+                      <Input
+                        id="spv_client_id"
+                        type="text"
+                        value={profile.spv_client_id || ""}
+                        onChange={(e) => setProfile({ ...profile, spv_client_id: e.target.value })}
+                        placeholder="ex: 1234567890abcdefghij"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        ID-ul clientului OAuth primit de la ANAF pentru accesul la API-ul e-Factura
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="spv_client_secret">Client Secret OAuth ANAF</Label>
+                      <Input
+                        id="spv_client_secret"
+                        type="password"
+                        value={profile.spv_client_secret || ""}
+                        onChange={(e) => setProfile({ ...profile, spv_client_secret: e.target.value })}
+                        placeholder="••••••••••••••••••••"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Secret-ul clientului OAuth (se păstrează confidențial și criptat)
+                      </p>
+                    </div>
+
+                    {profile.spv_client_id && profile.spv_client_secret && (
+                      <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <p className="text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
+                          ✅ <strong>Credențialele SPV sunt configurate!</strong>
+                        </p>
+                        <p className="text-xs text-green-900 dark:text-green-100 mt-1">
+                          Poți trimite facturi direct în SPV din pagina Facturi
+                        </p>
+                      </div>
+                    )}
+
+                    <Button type="submit" disabled={saving}>
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Salvează configurarea SPV
                     </Button>
                   </form>
                 </CardContent>

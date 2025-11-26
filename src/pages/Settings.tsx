@@ -112,20 +112,38 @@ const Settings = () => {
     e.preventDefault();
     setSaving(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Nu ești autentificat");
+        setSaving(false);
+        return;
+      }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update(profile)
-      .eq("id", user.id);
+      console.log("Updating profile for user:", user.id, "with data:", profile);
 
-    if (error) {
-      toast.error("Eroare la salvare");
-    } else {
-      toast.success("Profil actualizat!");
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(profile)
+        .eq("id", user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating profile:", error);
+        toast.error(`Eroare la salvare: ${error.message}`);
+      } else {
+        console.log("Profile updated successfully:", data);
+        toast.success("Profil actualizat!");
+        // Reload profile to show saved data
+        await loadProfile();
+      }
+    } catch (error: any) {
+      console.error("Unexpected error:", error);
+      toast.error(`Eroare: ${error.message || 'Eroare necunoscută'}`);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {

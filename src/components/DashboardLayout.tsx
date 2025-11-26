@@ -170,7 +170,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   };
 
   const navItems = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { 
+      href: userRole === "accountant" ? "/accountant-dashboard" : "/dashboard", 
+      icon: LayoutDashboard, 
+      label: userRole === "accountant" ? "Companiile mele" : "Dashboard" 
+    },
     { href: "/clients", icon: Users, label: "Clienți" },
     { href: "/invoices", icon: FileText, label: "Facturi" },
     { href: "/expenses", icon: Receipt, label: "Cheltuieli" },

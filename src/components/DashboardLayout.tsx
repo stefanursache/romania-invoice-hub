@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useTranslation } from "react-i18next";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -51,6 +53,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,7 +158,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       .single();
     
     setViewingCompany(profile?.company_name || null);
-    toast.success(`Acum vizualizezi: ${profile?.company_name}`);
+    toast.success(`${t('common.viewing')}: ${profile?.company_name}`);
     
     // Reload current page to refresh data
     window.location.reload();
@@ -171,9 +174,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast.error("Eroare la deconectare");
+      toast.error(t('nav.signOutError'));
     } else {
-      toast.success("Deconectat cu succes");
+      toast.success(t('nav.signOutSuccess'));
       navigate("/auth");
     }
   };
@@ -182,20 +185,20 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { 
       href: userRole === "accountant" ? "/accountant-dashboard" : "/dashboard", 
       icon: LayoutDashboard, 
-      label: userRole === "accountant" ? "Companiile mele" : "Dashboard" 
+      label: userRole === "accountant" ? t('nav.myCompanies') : t('nav.dashboard')
     },
-    { href: "/clients", icon: Users, label: "Clienți" },
-    { href: "/invoices", icon: FileText, label: "Facturi" },
-    { href: "/expenses", icon: Receipt, label: "Cheltuieli" },
-    { href: "/chart-of-accounts", icon: BookOpen, label: "Plan de Conturi" },
-    { href: "/team", icon: Users, label: "Echipă" },
-    { href: "/reports", icon: FileBarChart, label: "Rapoarte" },
-    { href: "/settings", icon: Settings, label: "Setări" },
+    { href: "/clients", icon: Users, label: t('nav.clients') },
+    { href: "/invoices", icon: FileText, label: t('nav.invoices') },
+    { href: "/expenses", icon: Receipt, label: t('nav.expenses') },
+    { href: "/chart-of-accounts", icon: BookOpen, label: t('nav.chartOfAccounts') },
+    { href: "/team", icon: Users, label: t('nav.team') },
+    { href: "/reports", icon: FileBarChart, label: t('nav.reports') },
+    { href: "/settings", icon: Settings, label: t('nav.settings') },
   ];
 
   const getPageName = (path: string) => {
     const item = navItems.find(nav => nav.href === path);
-    return item?.label || "Pagină";
+    return item?.label || t('common.page');
   };
 
   if (loading) {
@@ -236,11 +239,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <div className="mt-3 ml-[52px]">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full justify-between gap-2">
+                     <Button variant="outline" size="sm" className="w-full justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-3 w-3" />
                         <span className="truncate">
-                          {viewingCompany || "Selectează compania"}
+                          {viewingCompany || t('breadcrumb.switchCompany')}
                         </span>
                       </div>
                       <ChevronDown className="h-3 w-3 opacity-50" />
@@ -250,7 +253,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     align="start" 
                     className="w-[240px] bg-popover z-50"
                   >
-                    <DropdownMenuLabel>Companiile mele</DropdownMenuLabel>
+                    <DropdownMenuLabel>{t('breadcrumb.myCompanies')}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {availableWorkspaces.map((workspace) => (
                       <DropdownMenuItem
@@ -275,7 +278,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       className="cursor-pointer"
                     >
                       <ArrowLeft className="h-4 w-4 mr-2" />
-                      Vezi toate companiile
+                      {t('accountantDashboard.yourCompanies')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -291,7 +294,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               size="sm"
             >
               <ArrowLeft className="h-4 w-4" />
-              Toate companiile
+              {t('accountantDashboard.yourCompanies')}
             </Button>
           )}
 
@@ -318,14 +321,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             })}
           </nav>
 
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="w-full justify-start gap-3"
-          >
-            <LogOut className="h-5 w-5" />
-            Deconectare
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="flex-1 justify-start gap-3"
+            >
+              <LogOut className="h-5 w-5" />
+              {t('nav.signOut')}
+            </Button>
+            <LanguageToggle />
+          </div>
         </div>
       </aside>
 
@@ -341,7 +347,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     <BreadcrumbLink asChild>
                       <Link to="/accountant-dashboard" className="flex items-center gap-2">
                         <Home className="h-4 w-4" />
-                        Companiile mele
+                        {t('breadcrumb.myCompanies')}
                       </Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
@@ -357,7 +363,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                             <ChevronDown className="h-3 w-3" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start" className="w-[280px] bg-popover z-50">
-                            <DropdownMenuLabel>Schimbă compania</DropdownMenuLabel>
+                            <DropdownMenuLabel>{t('breadcrumb.switchCompany')}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {availableWorkspaces.map((workspace) => (
                               <DropdownMenuItem

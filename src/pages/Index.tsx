@@ -29,22 +29,40 @@ const Index = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // User is logged in, get their role
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-
-        if (roleData?.role === 'accountant') {
-          navigate('/accountant-dashboard');
-        } else {
-          navigate('/dashboard');
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setLoading(false);
+          return;
         }
-      } else {
+        
+        if (session) {
+          // User is logged in, get their role
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (roleError) {
+            console.error('Role error:', roleError);
+            // If there's an error getting the role, default to dashboard
+            navigate('/dashboard');
+            return;
+          }
+
+          if (roleData?.role === 'accountant') {
+            navigate('/accountant-dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
         setLoading(false);
       }
     };

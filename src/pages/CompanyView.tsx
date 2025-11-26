@@ -12,11 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark, Settings } from "lucide-react";
+import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark, Settings, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { exportToCSV } from "@/utils/exportUtils";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { InvoiceApprovalDialog } from "@/components/InvoiceApprovalDialog";
 
 interface Profile {
   company_name: string;
@@ -41,6 +42,8 @@ interface Invoice {
   total: number;
   currency: string;
   clients: { name: string };
+  accountant_approved: boolean;
+  approval_notes: string | null;
 }
 
 interface Expense {
@@ -107,6 +110,9 @@ const CompanyView = () => {
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
   const [expensePreviewOpen, setExpensePreviewOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [selectedInvoiceForApproval, setSelectedInvoiceForApproval] = useState<{ id: string; invoice_number: string } | null>(null);
+  const [approvingInvoice, setApprovingInvoice] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkAccess();
@@ -187,7 +193,7 @@ const CompanyView = () => {
   const loadInvoices = async () => {
     const { data, error } = await supabase
       .from("invoices")
-      .select("id, invoice_number, issue_date, due_date, status, total, currency, clients(name)")
+      .select("id, invoice_number, issue_date, due_date, status, total, currency, accountant_approved, approval_notes, clients(name)")
       .eq("user_id", companyId)
       .order("issue_date", { ascending: false })
       .limit(50);
@@ -342,6 +348,78 @@ const CompanyView = () => {
     
     toast.success("e-Factura downloaded successfully!");
     setEfacturaPreviewOpen(false);
+  };
+
+  const openApprovalDialog = (invoiceId: string, invoiceNumber: string) => {
+    setSelectedInvoiceForApproval({ id: invoiceId, invoice_number: invoiceNumber });
+    setApprovalDialogOpen(true);
+  };
+
+  const handleApproveInvoice = async (notes: string) => {
+    if (!selectedInvoiceForApproval) return;
+    
+    setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: true }));
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          accountant_approved: true,
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          approval_notes: notes || null
+        })
+        .eq('id', selectedInvoiceForApproval.id);
+
+      if (error) throw error;
+
+      toast.success("Factură aprobată cu succes!");
+      setApprovalDialogOpen(false);
+      setSelectedInvoiceForApproval(null);
+      loadInvoices();
+    } catch (error: any) {
+      console.error("Error approving invoice:", error);
+      toast.error(error.message || "Eroare la aprobarea facturii");
+    } finally {
+      setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: false }));
+    }
+  };
+
+  const handleRejectInvoice = async (notes: string) => {
+    if (!selectedInvoiceForApproval) return;
+    
+    setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: true }));
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          accountant_approved: false,
+          approved_by: null,
+          approved_at: null,
+          approval_notes: notes || "Factură respinsă de contabil",
+          status: 'draft'
+        })
+        .eq('id', selectedInvoiceForApproval.id);
+
+      if (error) throw error;
+
+      toast.success("Factură respinsă. Proprietarul va fi notificat.");
+      setApprovalDialogOpen(false);
+      setSelectedInvoiceForApproval(null);
+      loadInvoices();
+    } catch (error: any) {
+      console.error("Error rejecting invoice:", error);
+      toast.error(error.message || "Eroare la respingerea facturii");
+    } finally {
+      setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: false }));
+    }
   };
 
   const handlePreviewInvoice = async (invoice: Invoice) => {
@@ -723,8 +801,23 @@ const CompanyView = () => {
                                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                                     e-Factura
                                   </>
-                                )}
+                                 )}
                               </Button>
+                              {!invoice.accountant_approved && invoice.status === "sent" && (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => openApprovalDialog(invoice.id, invoice.invoice_number)}
+                                  disabled={approvingInvoice[invoice.id]}
+                                  title="Approve Invoice"
+                                >
+                                  {approvingInvoice[invoice.id] ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1246,6 +1339,16 @@ const CompanyView = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Invoice Approval Dialog */}
+        <InvoiceApprovalDialog
+          open={approvalDialogOpen}
+          onOpenChange={setApprovalDialogOpen}
+          invoiceNumber={selectedInvoiceForApproval?.invoice_number || ""}
+          onApprove={handleApproveInvoice}
+          onReject={handleRejectInvoice}
+          isLoading={selectedInvoiceForApproval ? approvingInvoice[selectedInvoiceForApproval.id] || false : false}
+        />
       </div>
     </DashboardLayout>
   );

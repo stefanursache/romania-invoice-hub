@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Building2, KeyRound, User, Cloud, CreditCard } from "lucide-react";
+import { Loader2, Building2, KeyRound, User, Cloud, CreditCard, ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 
@@ -44,10 +44,15 @@ const passwordSchema = z.object({
 const Settings = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const workspaceOwnerId = searchParams.get('workspace_owner_id');
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isViewingClient, setIsViewingClient] = useState(false);
+  const [profileOwnerId, setProfileOwnerId] = useState<string>("");
   const [subscription, setSubscription] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -119,10 +124,36 @@ const Settings = () => {
     
     setUserRole(roleData?.role || null);
 
+    // Determine which profile to load
+    let targetUserId = user.id;
+    let viewingClient = false;
+
+    if (workspaceOwnerId && roleData?.role === 'accountant') {
+      // Verify accountant has access to this workspace
+      const { data: hasAccess } = await supabase
+        .rpc('has_workspace_access', {
+          _workspace_owner_id: workspaceOwnerId,
+          _user_id: user.id
+        });
+
+      if (hasAccess) {
+        targetUserId = workspaceOwnerId;
+        viewingClient = true;
+        setIsViewingClient(true);
+        setProfileOwnerId(workspaceOwnerId);
+      } else {
+        toast.error("Nu aveți acces la acest profil");
+        navigate('/settings');
+        return;
+      }
+    } else {
+      setProfileOwnerId(user.id);
+    }
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", user.id)
+      .eq("id", targetUserId)
       .maybeSingle();
 
     if (error) {
@@ -162,13 +193,16 @@ const Settings = () => {
         return;
       }
 
-      console.log("Updating profile for user:", user.id, "with data:", profile);
+      // Use profileOwnerId for updates (could be client's ID if accountant is viewing)
+      const targetUserId = profileOwnerId || user.id;
+
+      console.log("Updating profile for user:", targetUserId, "with data:", profile);
 
       // First, check if profile exists
       const { data: existingProfile } = await supabase
         .from("profiles")
         .select("id")
-        .eq("id", user.id)
+        .eq("id", targetUserId)
         .maybeSingle();
 
       let data, error;
@@ -179,7 +213,7 @@ const Settings = () => {
         const result = await supabase
           .from("profiles")
           .insert({
-            id: user.id,
+            id: targetUserId,
             ...profile,
           })
           .select()
@@ -192,7 +226,7 @@ const Settings = () => {
         const result = await supabase
           .from("profiles")
           .update(profile)
-          .eq("id", user.id)
+          .eq("id", targetUserId)
           .select()
           .maybeSingle();
         
@@ -205,7 +239,7 @@ const Settings = () => {
         toast.error(`Eroare la salvare: ${error.message}`);
       } else {
         console.log("Profile saved successfully:", data);
-        toast.success("Profil actualizat!");
+        toast.success(isViewingClient ? "Profil client actualizat!" : "Profil actualizat!");
         // Reload profile to show saved data
         await loadProfile();
       }
@@ -314,10 +348,27 @@ const Settings = () => {
   return (
     <DashboardLayout>
       <div className="max-w-4xl space-y-6">
+        {isViewingClient && (
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/clients')}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Înapoi la clienți
+          </Button>
+        )}
         <div>
-          <h1 className="text-4xl font-bold mb-2">{t('settings.title')}</h1>
-          <p className="text-muted-foreground">{t('settings.subtitle')}</p>
-          {userRole === "accountant" && (
+          <h1 className="text-4xl font-bold mb-2">
+            {isViewingClient ? `Setări client: ${profile.company_name}` : t('settings.title')}
+          </h1>
+          <p className="text-muted-foreground">
+            {isViewingClient 
+              ? "Gestionează setările și credențialele SPV ale clientului" 
+              : t('settings.subtitle')
+            }
+          </p>
+          {userRole === "accountant" && !isViewingClient && (
             <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-sm text-blue-900 dark:text-blue-100">
                 <strong>{t('settings.accountantNote')}</strong> {t('settings.accountantNoteDesc')}
@@ -326,37 +377,51 @@ const Settings = () => {
           )}
         </div>
 
-        <Tabs defaultValue={userRole === "accountant" ? "account" : "company"} className="w-full">
-          <TabsList className={`grid w-full ${userRole === "accountant" ? "grid-cols-2" : "grid-cols-5"}`}>
-            {userRole !== "accountant" && (
+        <Tabs defaultValue={isViewingClient ? "spv" : (userRole === "accountant" ? "account" : "company")} className="w-full">
+          <TabsList className={`grid w-full ${
+            isViewingClient 
+              ? "grid-cols-2" 
+              : (userRole === "accountant" ? "grid-cols-2" : "grid-cols-5")
+          }`}>
+            {!isViewingClient && userRole !== "accountant" && (
               <TabsTrigger value="company" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Companie
               </TabsTrigger>
             )}
-            {userRole !== "accountant" && (
+            {(isViewingClient || userRole !== "accountant") && (
               <TabsTrigger value="spv" className="flex items-center gap-2">
                 <Cloud className="h-4 w-4" />
                 SPV / e-Factura
               </TabsTrigger>
             )}
-            {userRole !== "accountant" && (
-              <TabsTrigger value="payment" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Abonament
+            {!isViewingClient && (
+              <>
+                {userRole !== "accountant" && (
+                  <TabsTrigger value="payment" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Abonament
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="account" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {userRole === "accountant" ? "Cont personal" : "Contact"}
+                </TabsTrigger>
+                <TabsTrigger value="security" className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  Securitate
+                </TabsTrigger>
+              </>
+            )}
+            {isViewingClient && (
+              <TabsTrigger value="company" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Informații companie
               </TabsTrigger>
             )}
-            <TabsTrigger value="account" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              {userRole === "accountant" ? "Cont personal" : "Contact"}
-            </TabsTrigger>
-            <TabsTrigger value="security" className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4" />
-              Securitate
-            </TabsTrigger>
           </TabsList>
 
-          {userRole !== "accountant" && (
+          {(isViewingClient || userRole !== "accountant") && (
             <TabsContent value="company" className="space-y-4">
               <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
@@ -473,7 +538,7 @@ const Settings = () => {
             </TabsContent>
           )}
 
-          {userRole !== "accountant" && (
+          {(isViewingClient || userRole !== "accountant") && (
             <TabsContent value="spv" className="space-y-4">
               <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
@@ -550,7 +615,7 @@ const Settings = () => {
             </TabsContent>
           )}
 
-          {userRole !== "accountant" && (
+          {!isViewingClient && userRole !== "accountant" && (
             <TabsContent value="payment" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -809,7 +874,8 @@ const Settings = () => {
             </TabsContent>
           )}
 
-          <TabsContent value="account" className="space-y-4">
+          {!isViewingClient && (
+            <TabsContent value="account" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>{userRole === "accountant" ? "Informații cont" : "Informații de contact"}</CardTitle>
@@ -867,8 +933,10 @@ const Settings = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
-          <TabsContent value="security" className="space-y-4">
+          {!isViewingClient && (
+            <TabsContent value="security" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Schimbă parola</CardTitle>
@@ -922,6 +990,7 @@ const Settings = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
         </Tabs>
       </div>
     </DashboardLayout>

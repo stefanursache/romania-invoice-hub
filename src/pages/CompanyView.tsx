@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark } from "lucide-react";
+import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark, Settings } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { exportToCSV } from "@/utils/exportUtils";
@@ -583,9 +583,19 @@ const CompanyView = () => {
           {/* Profile Tab */}
           <TabsContent value="profile">
             <Card>
-              <CardHeader>
-                <CardTitle>Company Profile</CardTitle>
-                <CardDescription>Complete company information and registration details</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Company Profile</CardTitle>
+                  <CardDescription>Complete company information and registration details</CardDescription>
+                </div>
+                <Button
+                  onClick={() => navigate(`/settings?workspace_owner_id=${companyId}`)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Gestionează SPV / e-Factura
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

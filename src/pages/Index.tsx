@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ArrowRight, 
@@ -17,7 +18,8 @@ import {
   Sparkles,
   Receipt,
   BookOpen,
-  Landmark
+  Landmark,
+  Menu
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +86,18 @@ const Index = () => {
             </div>
             <span className="font-bold text-xl">SmartInvoice</span>
           </div>
-          <div className="flex items-center gap-4">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-4">
+            <Link to="/about">
+              <Button variant="ghost">Despre noi</Button>
+            </Link>
+            <Link to="/blog">
+              <Button variant="ghost">Blog</Button>
+            </Link>
+            <Link to="/contact">
+              <Button variant="ghost">Contact</Button>
+            </Link>
             <Link to="/auth?mode=login">
               <Button variant="ghost">Autentificare</Button>
             </Link>
@@ -94,6 +107,36 @@ const Index = () => {
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
+          </div>
+
+          {/* Mobile Navigation */}
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <div className="flex flex-col gap-4 mt-8">
+                  <Link to="/about">
+                    <Button variant="ghost" className="w-full justify-start">Despre noi</Button>
+                  </Link>
+                  <Link to="/blog">
+                    <Button variant="ghost" className="w-full justify-start">Blog</Button>
+                  </Link>
+                  <Link to="/contact">
+                    <Button variant="ghost" className="w-full justify-start">Contact</Button>
+                  </Link>
+                  <Link to="/auth?mode=login">
+                    <Button variant="outline" className="w-full">Autentificare</Button>
+                  </Link>
+                  <Link to="/auth?mode=signup">
+                    <Button className="w-full">Începe gratuit</Button>
+                  </Link>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </nav>
@@ -305,9 +348,9 @@ const Index = () => {
             <div>
               <h3 className="font-semibold mb-4">Companie</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Despre noi</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
+                <li><Link to="/about" className="hover:text-foreground transition-colors">Despre noi</Link></li>
+                <li><Link to="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
+                <li><Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
               </ul>
             </div>
             

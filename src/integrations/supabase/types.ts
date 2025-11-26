@@ -427,6 +427,9 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           reg_com: string | null
+          spv_client_id: string | null
+          spv_client_secret: string | null
+          spv_last_sync: string | null
           updated_at: string | null
         }
         Insert: {
@@ -444,6 +447,9 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           reg_com?: string | null
+          spv_client_id?: string | null
+          spv_client_secret?: string | null
+          spv_last_sync?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -461,6 +467,9 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           reg_com?: string | null
+          spv_client_id?: string | null
+          spv_client_secret?: string | null
+          spv_last_sync?: string | null
           updated_at?: string | null
         }
         Relationships: []

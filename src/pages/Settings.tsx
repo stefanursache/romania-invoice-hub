@@ -226,6 +226,19 @@ const Settings = () => {
 
           {userRole !== "accountant" && (
             <TabsContent value="company" className="space-y-4">
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  📋 Important pentru configurarea contului tău
+                </h3>
+                <p className="text-sm text-blue-900 dark:text-blue-100 mb-2">
+                  Completează toate informațiile companiei pentru a putea genera facturi corecte și conforme cu legislația românească:
+                </p>
+                <ul className="text-sm text-blue-900 dark:text-blue-100 list-disc list-inside space-y-1">
+                  <li><strong>CUI/CIF</strong> și <strong>Reg. Com.</strong> sunt necesare pentru facturi fiscale</li>
+                  <li><strong>IBAN</strong> va apărea pe facturile tale pentru plăți</li>
+                  <li><strong>Adresa completă</strong> este obligatorie pentru documentele oficiale</li>
+                </ul>
+              </div>
               <Card>
                 <CardHeader>
                   <CardTitle>Informații companie</CardTitle>

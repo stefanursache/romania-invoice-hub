@@ -180,7 +180,7 @@ const ChartOfAccounts = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Plan de Conturi</h1>
             <p className="text-muted-foreground">
-              Manage your chart of accounts for SAF-T reporting
+              Gestionează planul de conturi pentru raportarea SAF-T
             </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -254,6 +254,18 @@ const ChartOfAccounts = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </div>
+
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
+            📊 Despre Planul de Conturi Românesc
+          </h3>
+          <p className="text-sm text-amber-900 dark:text-amber-100 mb-2">
+            La prima înregistrare, ai fost configurat automat cu conturile standard românești (ex: 411 - Clienți, 401 - Furnizori, 707 - Venituri din vânzări).
+          </p>
+          <p className="text-sm text-amber-900 dark:text-amber-100">
+            Poți adăuga, modifica sau șterge conturi în funcție de nevoile specifice ale afacerii tale.
+          </p>
         </div>
 
         <Card>

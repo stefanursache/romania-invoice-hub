@@ -579,6 +579,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_standard_romanian_accounts: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       get_business_user_by_email: {
         Args: { user_email: string }
         Returns: {

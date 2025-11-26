@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +35,11 @@ const EXPENSE_CATEGORIES = [
   "Altele"
 ];
 
-export const ReceiptUpload = () => {
+interface ReceiptUploadProps {
+  onSuccess?: () => void;
+}
+
+export const ReceiptUpload = ({ onSuccess }: ReceiptUploadProps) => {
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -149,7 +152,11 @@ export const ReceiptUpload = () => {
       }
 
       toast.success("Cheltuiala a fost salvată!");
-      navigate("/expenses");
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate("/expenses");
+      }
     } catch (error: any) {
       console.error("Error saving:", error);
       toast.error(error.message || "Eroare la salvarea cheltuielii");
@@ -171,14 +178,7 @@ export const ReceiptUpload = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Scanează chitanță/bon fiscal</CardTitle>
-        <CardDescription>
-          Încarcă o imagine cu o chitanță pentru a extrage automat datele și categoriza cheltuiala
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-6">
         {!imagePreview ? (
           <div>
             <Label htmlFor="receipt-image" className="cursor-pointer">
@@ -361,7 +361,6 @@ export const ReceiptUpload = () => {
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 };

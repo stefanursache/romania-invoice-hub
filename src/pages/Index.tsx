@@ -29,10 +29,10 @@ const Index = () => {
             <span className="font-bold text-xl">SmartInvoice</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/auth">
+            <Link to="/auth?mode=login">
               <Button variant="ghost">Autentificare</Button>
             </Link>
-            <Link to="/auth">
+            <Link to="/auth?mode=signup">
               <Button className="group">
                 Începe gratuit
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -64,7 +64,7 @@ const Index = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Link to="/auth">
+              <Link to="/auth?mode=signup">
                 <Button size="lg" className="text-lg px-8 h-14 group shadow-lg hover:shadow-xl transition-all">
                   Începe acum - gratuit
                   <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
@@ -206,7 +206,7 @@ const Index = () => {
             Alătură-te miilor de PFA-uri și micro-SRL-uri care și-au simplificat procesul de facturare și conformitate fiscală.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link to="/auth">
+            <Link to="/auth?mode=signup">
               <Button size="lg" className="text-lg px-8 h-14 group shadow-lg">
                 Începe acum - gratuit
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />

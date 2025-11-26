@@ -52,16 +52,13 @@ export default function AccountantAccessRequest() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Check if business owner exists
+      // Check if business owner exists using secure function
       const { data: ownerData, error: ownerError } = await supabase
-        .from("profiles")
-        .select("id, email")
-        .eq("email", email.trim())
-        .maybeSingle();
+        .rpc("get_business_user_by_email", { user_email: email.trim() });
 
       if (ownerError) throw ownerError;
 
-      if (!ownerData) {
+      if (!ownerData || ownerData.length === 0) {
         toast({
           variant: "destructive",
           title: t("accessRequest.userNotFound"),
@@ -70,12 +67,14 @@ export default function AccountantAccessRequest() {
         return;
       }
 
+      const businessOwner = ownerData[0];
+
       // Check if already requested
       const { data: existingRequest } = await supabase
         .from("access_requests")
         .select("id, status")
         .eq("accountant_user_id", user.id)
-        .eq("business_owner_id", ownerData.id)
+        .eq("business_owner_id", businessOwner.user_id)
         .maybeSingle();
 
       if (existingRequest) {
@@ -107,7 +106,7 @@ export default function AccountantAccessRequest() {
         .insert({
           accountant_user_id: user.id,
           business_owner_email: email.trim(),
-          business_owner_id: ownerData.id,
+          business_owner_id: businessOwner.user_id,
           status: "pending",
         });
 

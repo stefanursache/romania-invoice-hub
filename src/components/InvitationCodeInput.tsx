@@ -40,7 +40,7 @@ export const InvitationCodeInput = () => {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (roleData?.role !== "accountant") {
         toast({
@@ -75,7 +75,7 @@ export const InvitationCodeInput = () => {
         .select("id")
         .eq("workspace_owner_id", inviteData.workspace_owner_id)
         .eq("member_user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (existingMember) {
         toast({

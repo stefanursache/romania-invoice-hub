@@ -166,7 +166,7 @@ const Settings = () => {
         .update(profile)
         .eq("id", user.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error updating profile:", error);

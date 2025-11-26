@@ -566,12 +566,156 @@ const Settings = () => {
                           Pentru a actualiza cardul, contactează suportul sau accesează portal-ul de plăți.
                         </p>
                       </div>
+
+                      <Button variant="outline" onClick={() => navigate('/pricing')}>
+                        Schimbă planul
+                      </Button>
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                      <p className="text-muted-foreground mb-4">Nu ai încă un abonament activ</p>
-                      <Button onClick={() => navigate('/pricing')}>Alege un plan</Button>
+                    <div className="space-y-6">
+                      <div className="text-center py-4">
+                        <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground mb-4">Alege un plan pentru afacerea ta</p>
+                      </div>
+
+                      {/* Pricing Plans Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Free Plan */}
+                        <Card className="border-2">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <span>Gratuit</span>
+                            </CardTitle>
+                            <CardDescription>Perfect pentru startup-uri și teste</CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="text-3xl font-bold">0 RON<span className="text-sm font-normal text-muted-foreground">/lună</span></div>
+                            <ul className="space-y-2 text-sm">
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>5 facturi/lună</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>1 utilizator</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Generare PDF facturi</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Gestionare clienți</span>
+                              </li>
+                            </ul>
+                            <Button variant="outline" className="w-full" disabled>
+                              Plan curent
+                            </Button>
+                          </CardContent>
+                        </Card>
+
+                        {/* Starter Plan - Recommended */}
+                        <Card className="border-2 border-primary shadow-lg">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <span>Starter</span>
+                              <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Recomandat</span>
+                            </CardTitle>
+                            <CardDescription>Pentru întreprinderi mici și PFA</CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="text-3xl font-bold">19 RON<span className="text-sm font-normal text-muted-foreground">/lună</span></div>
+                            <ul className="space-y-2 text-sm">
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Facturi nelimitate</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>3 utilizatori</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>e-Factura (ANAF) inclusă</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>SAF-T (D406) automat</span>
+                              </li>
+                            </ul>
+                            <Button className="w-full" onClick={() => toast.info("Integrare plăți în curând!")}>
+                              Selectează Starter
+                            </Button>
+                          </CardContent>
+                        </Card>
+
+                        {/* Professional Plan */}
+                        <Card className="border-2">
+                          <CardHeader>
+                            <CardTitle className="text-lg">Professional</CardTitle>
+                            <CardDescription>Pentru afaceri în creștere</CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="text-3xl font-bold">49 RON<span className="text-sm font-normal text-muted-foreground">/lună</span></div>
+                            <ul className="space-y-2 text-sm">
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Tot din Starter +</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>10 utilizatori</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>API acces complet</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Suport prioritar 24/7</span>
+                              </li>
+                            </ul>
+                            <Button className="w-full" variant="outline" onClick={() => toast.info("Integrare plăți în curând!")}>
+                              Selectează Professional
+                            </Button>
+                          </CardContent>
+                        </Card>
+
+                        {/* Enterprise Plan */}
+                        <Card className="border-2">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <span>Enterprise</span>
+                              <span className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded">Personalizat</span>
+                            </CardTitle>
+                            <CardDescription>Pentru corporații și companii mari</CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="text-3xl font-bold">Custom</div>
+                            <ul className="space-y-2 text-sm">
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Tot din Professional +</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Utilizatori nelimitați</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>Manager cont dedicat</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-primary">✓</span>
+                                <span>SLA garantat 99.9%</span>
+                              </li>
+                            </ul>
+                            <Button className="w-full" variant="outline" onClick={() => navigate('/contact')}>
+                              Contactează vânzări
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </div>
                     </div>
                   )}
                 </CardContent>

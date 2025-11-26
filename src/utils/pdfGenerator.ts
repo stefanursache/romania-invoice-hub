@@ -11,6 +11,7 @@ interface InvoiceData {
   vat_amount: number;
   total: number;
   notes?: string;
+  invoice_type?: string;
   client: {
     name: string;
     cui_cif?: string;
@@ -56,7 +57,10 @@ export const generateInvoicePDF = (
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
-  doc.text("FACTURĂ", 15, 20);
+  
+  // Show PRO FORMA or FACTURĂ based on invoice type
+  const documentTitle = invoice.invoice_type === "proforma" ? "PRO FORMA" : "FACTURĂ";
+  doc.text(documentTitle, 15, 20);
 
   doc.setFontSize(14);
   doc.setFont("helvetica", "normal");

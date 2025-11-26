@@ -281,6 +281,19 @@ serve(async (req) => {
       console.error('Error fetching accounts:', accountsError);
     }
 
+    // Validate required Romanian accounts
+    const requiredAccounts = ['4111', '707', '4427'];
+    const accountCodes = (accounts || []).map(acc => acc.account_code);
+    const missingAccounts = requiredAccounts.filter(code => !accountCodes.includes(code));
+    
+    if (missingAccounts.length > 0) {
+      throw new Error(
+        `Missing required Romanian standard accounts: ${missingAccounts.join(', ')}. ` +
+        `Please add these accounts in Chart of Accounts before generating SAF-T. ` +
+        `(4111 - Receivables, 707 - Revenue, 4427 - VAT Payable)`
+      );
+    }
+
     // Fetch customers (clients)
     const { data: clients, error: clientsError } = await supabaseClient
       .from('clients')

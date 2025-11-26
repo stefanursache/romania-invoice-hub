@@ -112,6 +112,20 @@ serve(async (req) => {
       throw new Error('Invoice not found');
     }
 
+    // Check if invoice is approved by accountant
+    if (!invoice.accountant_approved) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invoice must be approved by accountant before sending to SPV' 
+        }),
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     // Get invoice items
     const { data: items, error: itemsError } = await supabase
       .from('invoice_items')

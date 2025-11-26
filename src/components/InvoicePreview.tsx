@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import { CheckCircle } from "lucide-react";
 import { ro } from "date-fns/locale";
 import { Building2, User, Calendar, CreditCard, FileText } from "lucide-react";
 
@@ -19,6 +20,7 @@ interface InvoicePreviewProps {
     vat_amount: number;
     total: number;
     notes?: string;
+    accountant_approved?: boolean;
     clients: {
       name: string;
       cui_cif?: string;
@@ -85,9 +87,17 @@ export const InvoicePreview = ({ open, onOpenChange, invoice, items, company }: 
             <DialogTitle className="text-2xl">
               {invoice.invoice_type === "proforma" ? "Proforma" : "Factură"} #{invoice.invoice_number}
             </DialogTitle>
-            <Badge className={getStatusColor(invoice.status)}>
-              {getStatusLabel(invoice.status)}
-            </Badge>
+            <div className="flex gap-2">
+              <Badge className={getStatusColor(invoice.status)}>
+                {getStatusLabel(invoice.status)}
+              </Badge>
+              {invoice.accountant_approved && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Aprobată
+                </Badge>
+              )}
+            </div>
           </div>
         </DialogHeader>
 

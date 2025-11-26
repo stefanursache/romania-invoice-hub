@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
@@ -30,6 +30,9 @@ interface Invoice {
   total: number;
   currency: string;
   invoice_type: string;
+  accountant_approved: boolean;
+  approved_by?: string;
+  approved_at?: string;
   clients: {
     name: string;
   };
@@ -47,6 +50,7 @@ const Invoices = () => {
   const [previewItems, setPreviewItems] = useState<any[]>([]);
   const [previewCompany, setPreviewCompany] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [approvingInvoice, setApprovingInvoice] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkAuth();
@@ -317,6 +321,34 @@ const Invoices = () => {
     }
   };
 
+  const handleApproveInvoice = async (invoiceId: string) => {
+    setApprovingInvoice((prev) => ({ ...prev, [invoiceId]: true }));
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          accountant_approved: true,
+          approved_by: user.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      toast.success("Factură aprobată cu succes!");
+      loadInvoices();
+    } catch (error: any) {
+      console.error("Error approving invoice:", error);
+      toast.error(error.message || "Eroare la aprobarea facturii");
+    } finally {
+      setApprovingInvoice((prev) => ({ ...prev, [invoiceId]: false }));
+    }
+  };
+
   const handleSendToSPV = async (invoiceId: string) => {
     setSendingToSpv((prev) => ({ ...prev, [invoiceId]: true }));
     
@@ -498,10 +530,16 @@ const Invoices = () => {
                         </Badge>
                       )}
                     </div>
-                    <Badge className={getStatusColor(invoice.status)}>
-                      {getStatusLabel(invoice.status)}
+                  <Badge className={getStatusColor(invoice.status)}>
+                    {getStatusLabel(invoice.status)}
+                  </Badge>
+                  {invoice.accountant_approved && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Aprobată
                     </Badge>
-                  </div>
+                  )}
+                </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
@@ -562,13 +600,28 @@ const Invoices = () => {
                           <FileCode className="h-4 w-4" />
                         )}
                       </Button>
+                       {userRole === "accountant" && !invoice.accountant_approved && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleApproveInvoice(invoice.id)}
+                          disabled={approvingInvoice[invoice.id]}
+                          title="Aprobă factură"
+                        >
+                          {approvingInvoice[invoice.id] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                       {userRole === "owner" && invoice.status !== "sent" && (
                         <Button
                           size="sm"
                           variant="default"
                           onClick={() => handleSendToSPV(invoice.id)}
-                          disabled={sendingToSpv[invoice.id]}
-                          title="Trimite în SPV"
+                          disabled={sendingToSpv[invoice.id] || !invoice.accountant_approved}
+                          title={!invoice.accountant_approved ? "Factura trebuie aprobată de contabil" : "Trimite în SPV"}
                           className="bg-primary hover:bg-primary/90"
                         >
                           {sendingToSpv[invoice.id] ? (

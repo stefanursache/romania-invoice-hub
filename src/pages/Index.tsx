@@ -92,6 +92,9 @@ const Index = () => {
             <Link to="/about">
               <Button variant="ghost">Despre noi</Button>
             </Link>
+            <Link to="/pricing">
+              <Button variant="ghost">Prețuri</Button>
+            </Link>
             <Link to="/blog">
               <Button variant="ghost">Blog</Button>
             </Link>
@@ -121,6 +124,9 @@ const Index = () => {
                 <div className="flex flex-col gap-4 mt-8">
                   <Link to="/about">
                     <Button variant="ghost" className="w-full justify-start">Despre noi</Button>
+                  </Link>
+                  <Link to="/pricing">
+                    <Button variant="ghost" className="w-full justify-start">Prețuri</Button>
                   </Link>
                   <Link to="/blog">
                     <Button variant="ghost" className="w-full justify-start">Blog</Button>
@@ -340,7 +346,7 @@ const Index = () => {
               <h3 className="font-semibold mb-4">Produs</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="#" className="hover:text-foreground transition-colors">Funcționalități</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Prețuri</a></li>
+                <li><Link to="/pricing" className="hover:text-foreground transition-colors">Prețuri</Link></li>
                 <li><a href="#" className="hover:text-foreground transition-colors">Demo</a></li>
               </ul>
             </div>

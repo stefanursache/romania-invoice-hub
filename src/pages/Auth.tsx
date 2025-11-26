@@ -81,7 +81,33 @@ const Auth = () => {
           .from("user_roles")
           .select("role")
           .eq("user_id", data.user.id)
-          .single();
+          .maybeSingle();
+
+        // PROFILE FALLBACK: Check if profile exists on login
+        const { data: profileCheck } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+        // If profile doesn't exist, create it as fallback
+        if (!profileCheck) {
+          console.warn("Profile missing on login, creating fallback profile");
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .insert({
+              id: data.user.id,
+              company_name: "My Company",
+              email: data.user.email || email,
+            });
+
+          if (profileError) {
+            console.error("Error creating profile fallback on login:", profileError);
+            // Don't block login, just log the error
+          } else {
+            console.log("Profile created successfully via login fallback");
+          }
+        }
         
         toast.success("Autentificare reușită!");
         
@@ -136,6 +162,34 @@ const Auth = () => {
             await supabase.auth.signOut();
             setLoading(false);
             return;
+          }
+
+          // PROFILE CREATION FALLBACK: Check if profile was created by trigger
+          const { data: profileCheck, error: profileCheckError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", data.user.id)
+            .maybeSingle();
+
+          // If profile doesn't exist, create it manually as fallback
+          if (!profileCheck) {
+            console.warn("Profile trigger failed, creating profile manually");
+            const { error: profileError } = await supabase
+              .from("profiles")
+              .insert({
+                id: data.user.id,
+                company_name: userRole === "business" ? companyName : "My Company",
+                email: email,
+              });
+
+            if (profileError) {
+              console.error("Error creating profile fallback:", profileError);
+              toast.error("Eroare la crearea profilului. Te rugăm să contactezi suportul.");
+              await supabase.auth.signOut();
+              setLoading(false);
+              return;
+            }
+            console.log("Profile created successfully via fallback");
           }
           
           toast.success("Cont creat cu succes!");

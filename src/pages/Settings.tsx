@@ -161,18 +161,47 @@ const Settings = () => {
 
       console.log("Updating profile for user:", user.id, "with data:", profile);
 
-      const { data, error } = await supabase
+      // First, check if profile exists
+      const { data: existingProfile } = await supabase
         .from("profiles")
-        .update(profile)
+        .select("id")
         .eq("id", user.id)
-        .select()
         .maybeSingle();
 
+      let data, error;
+
+      if (!existingProfile) {
+        // Profile doesn't exist, create it (fallback)
+        console.warn("Profile doesn't exist, creating new profile");
+        const result = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            ...profile,
+          })
+          .select()
+          .maybeSingle();
+        
+        data = result.data;
+        error = result.error;
+      } else {
+        // Profile exists, update it
+        const result = await supabase
+          .from("profiles")
+          .update(profile)
+          .eq("id", user.id)
+          .select()
+          .maybeSingle();
+        
+        data = result.data;
+        error = result.error;
+      }
+
       if (error) {
-        console.error("Error updating profile:", error);
+        console.error("Error saving profile:", error);
         toast.error(`Eroare la salvare: ${error.message}`);
       } else {
-        console.log("Profile updated successfully:", data);
+        console.log("Profile saved successfully:", data);
         toast.success("Profil actualizat!");
         // Reload profile to show saved data
         await loadProfile();

@@ -1,10 +1,1 @@
-project_id = "mvuqfxcyfovhbwewjdzr"
-
-[functions.extract-invoice-data]
-verify_jwt = false
-
-[functions.extract-receipt-data]
-verify_jwt = false
-
-[functions.scheduled-saft-generation]
-verify_jwt = false
+project_id = "jyskchlxjuhjmvqztfvp"

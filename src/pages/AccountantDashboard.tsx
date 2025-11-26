@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountantNotifications } from "@/components/AccountantNotifications";
 import AccountantAccessRequest from "@/components/AccountantAccessRequest";
 import { InvitationCodeInput } from "@/components/InvitationCodeInput";
@@ -34,7 +35,10 @@ import {
   Download,
   Filter,
   SortAsc,
-  Eye
+  Eye,
+  UserPlus,
+  Bell,
+  LayoutDashboard
 } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
@@ -62,6 +66,7 @@ const AccountantDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "invoices" | "drafts" | "recent">("name");
   const [filterBy, setFilterBy] = useState<"all" | "active" | "attention">("all");
+  const [activeTab, setActiveTab] = useState("companies");
 
   useEffect(() => {
     checkAuth();
@@ -231,11 +236,32 @@ const AccountantDashboard = () => {
           </div>
         </div>
 
-        <AccountantAccessRequest />
+        {/* Tabs Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+            <TabsTrigger value="companies" className="gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Companiile mele</span>
+              <span className="sm:hidden">Companii</span>
+              {workspaces.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{workspaces.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="join" className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Alătură-te</span>
+              <span className="sm:hidden">Alătură</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-2">
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Notificări</span>
+              <span className="sm:hidden">Notif.</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <InvitationCodeInput />
-
-        {workspaces.length === 0 ? (
+          {/* Tab: My Companies */}
+          <TabsContent value="companies" className="space-y-6">
+            {workspaces.length === 0 ? (
           <Card className="border-2 border-dashed">
             <CardContent className="py-16 text-center space-y-6">
               <div className="relative mx-auto w-24 h-24">
@@ -515,6 +541,102 @@ const AccountantDashboard = () => {
             )}
           </div>
         )}
+      </TabsContent>
+
+          {/* Tab: Join Workspace */}
+          <TabsContent value="join" className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <InvitationCodeInput />
+              <AccountantAccessRequest />
+            </div>
+
+            <Card className="bg-muted/30">
+              <CardHeader>
+                <CardTitle className="text-lg">Cum funcționează?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-bold text-sm">1</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">Cod de invitație</p>
+                      <p className="text-sm text-muted-foreground">
+                        Primești un cod de 8 caractere de la companie, valabil 24 de ore.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-bold text-sm">2</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">Cerere de acces</p>
+                      <p className="text-sm text-muted-foreground">
+                        Sau trimite o cerere direct prin email către proprietarul business-ului.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-bold text-sm">3</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">Acces instant</p>
+                      <p className="text-sm text-muted-foreground">
+                        După confirmare, vei vedea compania în tab-ul "Companiile mele".
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab: Notifications */}
+          <TabsContent value="notifications" className="space-y-6">
+            <AccountantNotifications />
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Setări notificări</CardTitle>
+                <CardDescription>
+                  Configurează ce tip de notificări vrei să primești
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Facturi noi</p>
+                    <p className="text-sm text-muted-foreground">
+                      Notificări când se adaugă facturi noi
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Curând</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Ciorne care necesită atenție</p>
+                    <p className="text-sm text-muted-foreground">
+                      Alertă pentru facturi în draft
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Curând</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Rapoarte lunare</p>
+                    <p className="text-sm text-muted-foreground">
+                      Rezumat lunar pentru fiecare companie
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Curând</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

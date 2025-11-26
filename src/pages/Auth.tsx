@@ -6,7 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, Check, X } from "lucide-react";
+import { z } from "zod";
+
+const passwordSchema = z.string()
+  .min(8, "Parola trebuie să conțină minimum 8 caractere")
+  .regex(/[A-Z]/, "Parola trebuie să conțină cel puțin o literă mare")
+  .regex(/[a-z]/, "Parola trebuie să conțină cel puțin o literă mică")
+  .regex(/[0-9]/, "Parola trebuie să conțină cel puțin o cifră");
+
+const emailSchema = z.string().email("Email invalid");
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -15,12 +24,47 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+
+  const validatePassword = (pwd: string) => {
+    const result = passwordSchema.safeParse(pwd);
+    if (!result.success) {
+      return result.error.errors.map(err => err.message);
+    }
+    return [];
+  };
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (!isLogin) {
+      setPasswordErrors(validatePassword(value));
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Validate email
+      const emailValidation = emailSchema.safeParse(email);
+      if (!emailValidation.success) {
+        toast.error("Email invalid");
+        setLoading(false);
+        return;
+      }
+
+      // Validate password on signup
+      if (!isLogin) {
+        const pwdErrors = validatePassword(password);
+        if (pwdErrors.length > 0) {
+          toast.error("Parola nu îndeplinește cerințele de securitate");
+          setLoading(false);
+          return;
+        }
+      }
+
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -100,15 +144,33 @@ const Auth = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Parolă</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
+                  required
+                  minLength={8}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {!isLogin && password && (
+                <div className="mt-3 space-y-2 text-sm">
+                  <PasswordRequirement met={password.length >= 8} text="Minimum 8 caractere" />
+                  <PasswordRequirement met={/[A-Z]/.test(password)} text="O literă mare" />
+                  <PasswordRequirement met={/[a-z]/.test(password)} text="O literă mică" />
+                  <PasswordRequirement met={/[0-9]/.test(password)} text="O cifră" />
+                </div>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -129,5 +191,16 @@ const Auth = () => {
     </div>
   );
 };
+
+const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
+  <div className="flex items-center gap-2">
+    {met ? (
+      <Check className="h-4 w-4 text-green-500" />
+    ) : (
+      <X className="h-4 w-4 text-muted-foreground" />
+    )}
+    <span className={met ? "text-green-500" : "text-muted-foreground"}>{text}</span>
+  </div>
+);
 
 export default Auth;

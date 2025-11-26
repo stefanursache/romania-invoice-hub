@@ -115,9 +115,32 @@ const Auth = () => {
           
           if (roleError) {
             console.error("Error creating user role:", roleError);
+            toast.error("Eroare la crearea contului. Te rugăm să încerci din nou.");
+            // Sign out the user since role creation failed
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+          
+          // Verify role was created successfully
+          const { data: verifyRole, error: verifyError } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", data.user.id)
+            .single();
+          
+          if (verifyError || !verifyRole) {
+            console.error("Error verifying user role:", verifyError);
+            toast.error("Eroare la crearea contului. Te rugăm să încerci din nou.");
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
           }
           
           toast.success("Cont creat cu succes!");
+          
+          // Small delay to ensure database commit
+          await new Promise(resolve => setTimeout(resolve, 500));
           
           if (userRole === "accountant") {
             navigate("/accountant-dashboard");

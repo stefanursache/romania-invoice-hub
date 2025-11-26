@@ -123,6 +123,16 @@ const Reports = () => {
 
       if (error) throw error;
 
+      if (data.error) {
+        // Check if it's a validation error about missing accounts
+        if (data.error.includes("Missing required Romanian standard accounts")) {
+          toast.error(data.error, { duration: 6000 });
+        } else {
+          toast.error(data.error);
+        }
+        return;
+      }
+
       if (data.success) {
         toast.success("SAF-T XML generated successfully");
         
@@ -145,7 +155,13 @@ const Reports = () => {
       }
     } catch (error) {
       console.error("Error generating SAF-T:", error);
-      toast.error("Failed to generate SAF-T XML");
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate SAF-T XML";
+      
+      if (errorMessage.includes("Missing required Romanian standard accounts")) {
+        toast.error(errorMessage, { duration: 6000 });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setGenerating(false);
     }
@@ -215,9 +231,22 @@ const Reports = () => {
         <Card>
           <CardHeader>
             <CardTitle>Generate SAF-T Export</CardTitle>
-            <CardDescription>Select the period for which to generate the SAF-T file</CardDescription>
+            <CardDescription>
+              Select the period for which to generate the SAF-T file. Automatic generation runs monthly on the 1st at 2 AM.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
+              <p className="font-medium">Required Chart of Accounts:</p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>4111 - Client Receivables (Creanțe clienți)</li>
+                <li>707 - Revenue from Services/Products (Venituri)</li>
+                <li>4427 - VAT Payable (TVA colectată)</li>
+              </ul>
+              <p className="text-xs text-muted-foreground mt-2">
+                Make sure these accounts exist in your Chart of Accounts before generating SAF-T.
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="periodType">Period Type</Label>

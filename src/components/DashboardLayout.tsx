@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   LayoutDashboard, 
   Users, 
@@ -13,7 +14,9 @@ import {
   X,
   FileBarChart,
   BookOpen,
-  Receipt
+  Receipt,
+  ArrowLeft,
+  Building2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +31,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [viewingCompany, setViewingCompany] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -37,6 +42,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         
         if (!session) {
           navigate("/auth");
+        } else {
+          // Load user role when session changes
+          setTimeout(() => {
+            loadUserRole(session.user.id);
+          }, 0);
         }
       }
     );
@@ -48,11 +58,41 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       
       if (!session) {
         navigate("/auth");
+      } else {
+        loadUserRole(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const loadUserRole = async (userId: string) => {
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .single();
+    
+    setUserRole(roleData?.role || null);
+
+    // Check if viewing another company's workspace
+    const activeWorkspaceOwner = sessionStorage.getItem("active_workspace_owner");
+    if (activeWorkspaceOwner && roleData?.role === "accountant") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_name")
+        .eq("id", activeWorkspaceOwner)
+        .single();
+      
+      setViewingCompany(profile?.company_name || null);
+    }
+  };
+
+  const handleBackToAccountantDashboard = () => {
+    sessionStorage.removeItem("active_workspace_owner");
+    setViewingCompany(null);
+    navigate("/accountant-dashboard");
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -108,7 +148,28 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <h1 className="text-2xl font-bold text-foreground">SmartInvoice</h1>
             </div>
             <p className="text-sm text-muted-foreground ml-[52px]">{user?.email}</p>
+            
+            {userRole === "accountant" && viewingCompany && (
+              <div className="mt-3 ml-[52px]">
+                <Badge variant="secondary" className="gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {viewingCompany}
+                </Badge>
+              </div>
+            )}
           </div>
+
+          {userRole === "accountant" && viewingCompany && (
+            <Button
+              onClick={handleBackToAccountantDashboard}
+              variant="outline"
+              className="mb-4 justify-start gap-2"
+              size="sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Înapoi la companiile mele
+            </Button>
+          )}
 
           <nav className="flex-1 space-y-2">
             {navItems.map((item) => {

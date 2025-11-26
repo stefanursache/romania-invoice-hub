@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, Check, X } from "lucide-react";
+import { Loader2, Eye, EyeOff, Check, X, Building2, Calculator } from "lucide-react";
 import { z } from "zod";
 
 const passwordSchema = z.string()
@@ -24,6 +25,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [userRole, setUserRole] = useState<"business" | "accountant">("business");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
@@ -66,21 +68,34 @@ const Auth = () => {
       }
 
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         
         if (error) throw error;
+        
+        // Check user role to redirect appropriately
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .single();
+        
         toast.success("Autentificare reușită!");
-        navigate("/dashboard");
+        
+        if (roleData?.role === "accountant") {
+          navigate("/accountant-dashboard");
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              company_name: companyName,
+              company_name: userRole === "business" ? companyName : undefined,
             },
             emailRedirectTo: `${window.location.origin}/dashboard`,
           },
@@ -88,10 +103,27 @@ const Auth = () => {
         
         if (error) throw error;
         
-        // If session exists (auto-confirm enabled), redirect to dashboard
-        if (data.session) {
+        // If session exists (auto-confirm enabled), create user role and redirect
+        if (data.session && data.user) {
+          // Insert user role
+          const { error: roleError } = await supabase
+            .from("user_roles")
+            .insert({
+              user_id: data.user.id,
+              role: userRole,
+            });
+          
+          if (roleError) {
+            console.error("Error creating user role:", roleError);
+          }
+          
           toast.success("Cont creat cu succes!");
-          navigate("/dashboard");
+          
+          if (userRole === "accountant") {
+            navigate("/accountant-dashboard");
+          } else {
+            navigate("/dashboard");
+          }
         } else {
           // Email confirmation required
           toast.success("Cont creat cu succes! Verifică emailul pentru confirmare.");
@@ -119,17 +151,47 @@ const Auth = () => {
         <CardContent>
           <form onSubmit={handleAuth} className="space-y-4">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="company">Nume companie</Label>
-                <Input
-                  id="company"
-                  type="text"
-                  placeholder="Ex: SRL Consulting"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required={!isLogin}
-                />
-              </div>
+              <>
+                <div className="space-y-3">
+                  <Label>Tip utilizator</Label>
+                  <RadioGroup value={userRole} onValueChange={(value) => setUserRole(value as "business" | "accountant")}>
+                    <div className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer">
+                      <RadioGroupItem value="business" id="business" />
+                      <Label htmlFor="business" className="flex items-center gap-3 cursor-pointer flex-1">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-medium">Afacere / PFA</p>
+                          <p className="text-sm text-muted-foreground">Emite facturi și gestionează clienți</p>
+                        </div>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer">
+                      <RadioGroupItem value="accountant" id="accountant" />
+                      <Label htmlFor="accountant" className="flex items-center gap-3 cursor-pointer flex-1">
+                        <Calculator className="h-5 w-5 text-accent" />
+                        <div>
+                          <p className="font-medium">Contabil</p>
+                          <p className="text-sm text-muted-foreground">Lucrează pentru multiple companii</p>
+                        </div>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {userRole === "business" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Nume companie</Label>
+                    <Input
+                      id="company"
+                      type="text"
+                      placeholder="Ex: SRL Consulting"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+              </>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

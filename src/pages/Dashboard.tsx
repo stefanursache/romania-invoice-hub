@@ -21,9 +21,13 @@ const Dashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Check if accountant viewing another workspace
+    const activeWorkspaceOwner = sessionStorage.getItem("active_workspace_owner");
+    const effectiveUserId = activeWorkspaceOwner || user.id;
+
     const [clientsRes, invoicesRes] = await Promise.all([
-      supabase.from("clients").select("id", { count: "exact" }).eq("user_id", user.id),
-      supabase.from("invoices").select("status", { count: "exact" }).eq("user_id", user.id),
+      supabase.from("clients").select("id", { count: "exact" }).eq("user_id", effectiveUserId),
+      supabase.from("invoices").select("status", { count: "exact" }).eq("user_id", effectiveUserId),
     ]);
 
     const draftCount = invoicesRes.data?.filter(inv => inv.status === "draft").length || 0;

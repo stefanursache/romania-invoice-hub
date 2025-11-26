@@ -301,6 +301,44 @@
     "view": "Vezi",
     "errorLoading": "Eroare la încărcarea notificărilor"
   },
+  "saftStatus": {
+    "title": "Status SAF-T",
+    "lastGenerated": "Ultima generare",
+    "nextGeneration": "Următoarea generare",
+    "scheduled": "Programată în fiecare lună în data de 1 la ora 2 dimineața",
+    "noExports": "Niciun export SAF-T încă",
+    "failed": "Generarea a eșuat"
+  },
+  "accessRequest": {
+    "title": "Solicită Acces la Firmă",
+    "description": "Introdu adresa de email a proprietarului firmei pentru a solicita acces la datele sale.",
+    "sendRequest": "Trimite Cerere",
+    "requesting": "Se trimite...",
+    "success": "Acces Solicitat",
+    "successDesc": "Cererea ta a fost trimisă. Vei fi notificat când proprietarul va răspunde.",
+    "userNotFound": "Firmă Negăsită",
+    "userNotFoundDesc": "Nu există niciun cont de firmă cu acest email.",
+    "alreadyRequested": "Deja Solicitat",
+    "alreadyRequestedDesc": "Ai deja o cerere în așteptare la această firmă.",
+    "alreadyApproved": "Deja Aprobat",
+    "alreadyApprovedDesc": "Ai deja acces la această firmă.",
+    "previouslyRejected": "Respins Anterior",
+    "previouslyRejectedDesc": "Cererea ta anterioară a fost respinsă. Contactează direct proprietarul firmei.",
+    "myRequests": "Cererile Mele de Acces",
+    "myRequestsDesc": "Urmărește statusul cererilor tale de acces.",
+    "requestedOn": "Solicitat pe",
+    "statusPending": "În Așteptare",
+    "statusApproved": "Aprobat",
+    "statusRejected": "Respins",
+    "incomingRequests": "Cereri de Acces în Așteptare",
+    "incomingRequestsDesc": "Contabili care solicită acces la datele firmei tale.",
+    "approve": "Aprobă",
+    "reject": "Respinge",
+    "approved": "Cerere Aprobată",
+    "approvedDesc": "Contabilul are acum acces la datele tale.",
+    "rejected": "Cerere Respinsă",
+    "rejectedDesc": "Cererea de acces a fost respinsă."
+  },
   "breadcrumb": {
     "myCompanies": "Companiile mele",
     "switchCompany": "Schimbă compania"
@@ -334,6 +372,8 @@
     "company": "Companie",
     "companies": "companii",
     "viewing": "Acum vizualizezi",
-    "page": "Pagină"
+    "page": "Pagină",
+    "error": "Eroare",
+    "unknown": "Necunoscut"
   }
 }

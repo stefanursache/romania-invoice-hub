@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { AccountantNotifications } from "@/components/AccountantNotifications";
+import AccountantAccessRequest from "@/components/AccountantAccessRequest";
 import { useTranslation } from "react-i18next";
 import { 
   Building2, 
@@ -180,6 +181,8 @@ const AccountantDashboard = () => {
             </p>
           </div>
         </div>
+
+        <AccountantAccessRequest />
 
         {workspaces.length === 0 ? (
           <Card className="border-2 border-dashed">

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/DashboardLayout";
 import { UserPlus, Trash2, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import AccessRequestsManagement from "@/components/AccessRequestsManagement";
 
 interface TeamMember {
   id: string;
@@ -216,6 +217,8 @@ export default function Team() {
             Invite accountants to collaborate with read-only access to your invoices and data.
           </p>
         </div>
+
+        <AccessRequestsManagement />
 
         <Card>
           <CardHeader>

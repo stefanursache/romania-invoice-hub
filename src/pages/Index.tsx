@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ArrowRight, 
   CheckCircle, 
@@ -13,7 +14,10 @@ import {
   Clock,
   Download,
   BarChart3,
-  Sparkles
+  Sparkles,
+  Receipt,
+  BookOpen,
+  Landmark
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Index = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -103,7 +108,12 @@ const Index = () => {
                   <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="text-lg px-8 h-14">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="text-lg px-8 h-14"
+                onClick={() => setDemoDialogOpen(true)}
+              >
                 <Download className="mr-2 h-5 w-5" />
                 Vezi demo
               </Button>
@@ -298,6 +308,268 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {/* Demo Dialog */}
+      <Dialog open={demoDialogOpen} onOpenChange={setDemoDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">SmartInvoice - Demo Platformă</DialogTitle>
+            <DialogDescription>
+              Explorează funcționalitățile complete ale platformei noastre de facturare
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Dashboard Overview */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Dashboard Inteligent</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Vizualizează în timp real toate informațiile importante despre afacerea ta: 
+                      venituri, cheltuieli, facturi în așteptare și grafice de analiză.
+                    </p>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Grafice interactive cu venituri și cheltuieli</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Monitorizare cash-flow în timp real</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Statistici rapide și alerte importante</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Invoicing */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-500/10 rounded-lg">
+                    <FileText className="h-6 w-6 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Facturare Profesională</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Creează și gestionează facturi profesionale în câteva secunde. Export automat XML pentru eFactura ANAF.
+                    </p>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Creare rapidă de facturi cu template-uri profesionale</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Generare automată eFactura XML pentru ANAF</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Import facturi din imagine cu OCR AI</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Gestionare clienți și istoric facturi</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Expense Management */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-green-500/10 rounded-lg">
+                    <Receipt className="h-6 w-6 text-green-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Gestionare Cheltuieli</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Scanează bonuri fiscale și digitalizează automat cheltuielile folosind tehnologie OCR AI.
+                    </p>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Scanare automată bonuri cu AI (OCR)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Categorizare automată cheltuieli</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Calcul automat TVA deductibil</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Export rapoarte cheltuieli</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* SAF-T Reports */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-purple-500/10 rounded-lg">
+                    <BarChart3 className="h-6 w-6 text-purple-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Rapoarte SAF-T (D406)</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Generare automată lunară SAF-T XML pentru declarația D406 la ANAF. Conformitate totală cu legislația română.
+                    </p>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Generare automată SAF-T XML (D406)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Programare automată lunară</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Validare date înainte de export</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Istoric complet rapoarte</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Accountant Collaboration */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-orange-500/10 rounded-lg">
+                    <Users className="h-6 w-6 text-orange-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Colaborare cu Contabilul</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Invită-ți contabilul să acceseze direct datele financiare. Fără email-uri, fără Excel-uri.
+                    </p>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Acces securizat pentru contabil</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Descărcare facturi, cheltuieli și rapoarte</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Generare documente ANAF (eFactura, SAF-T)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Gestionare multiple companii</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Chart of Accounts */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-indigo-500/10 rounded-lg">
+                    <BookOpen className="h-6 w-6 text-indigo-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Plan de Conturi</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Plan de conturi pre-configurat conform standardelor românești de contabilitate.
+                    </p>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Conturi standard românești pre-populate</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Adaugă și personalizează conturi</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Conformitate ANAF garantată</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bank Statements */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-teal-500/10 rounded-lg">
+                    <Landmark className="h-6 w-6 text-teal-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Extrase Bancare</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Încarcă și gestionează extrasele bancare pentru reconciliere completă.
+                    </p>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Upload securizat documente bancare</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Acces partajat cu contabilul</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Organizare cronologică</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* CTA */}
+            <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-8 text-center text-primary-foreground">
+              <h3 className="text-2xl font-bold mb-3">Gata să începi?</h3>
+              <p className="mb-6 opacity-90">
+                Creează contul gratuit și automatizează complet procesul de facturare
+              </p>
+              <Link to="/auth?mode=signup">
+                <Button size="lg" variant="secondary" className="text-lg px-8">
+                  Începe acum - gratuit
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

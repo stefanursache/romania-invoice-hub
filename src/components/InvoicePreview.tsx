@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { CheckCircle } from "lucide-react";
 import { ro } from "date-fns/locale";
 import { Building2, User, Calendar, CreditCard, FileText } from "lucide-react";
+import { InvoiceStatusWorkflow } from "./InvoiceStatusWorkflow";
 
 interface InvoicePreviewProps {
   open: boolean;
@@ -103,6 +104,15 @@ export const InvoicePreview = ({ open, onOpenChange, invoice, items, company }: 
         </DialogHeader>
 
         <div className="space-y-6 pt-4">
+          {/* Status Workflow */}
+          <InvoiceStatusWorkflow
+            status={invoice.status}
+            accountantApproved={invoice.accountant_approved || false}
+            approvalNotes={invoice.approval_notes}
+          />
+
+          <Separator />
+
           {/* Header Section */}
           <div className="bg-primary/5 rounded-lg p-6">
             <div className="grid grid-cols-2 gap-8">
@@ -227,32 +237,16 @@ export const InvoicePreview = ({ open, onOpenChange, invoice, items, company }: 
             </div>
           )}
 
-          {/* Approval Notes */}
-          {invoice.approval_notes && (
-            <div className={`p-4 rounded-lg border ${
-              invoice.accountant_approved
-                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-            }`}>
-              <p className={`text-sm font-semibold mb-2 ${
-                invoice.accountant_approved
-                  ? "text-green-900 dark:text-green-200"
-                  : "text-red-900 dark:text-red-200"
-              }`}>
-                {invoice.accountant_approved ? "Comentarii aprobare contabil" : "Motiv respingere"}
-              </p>
-              <p className={`text-sm ${
-                invoice.accountant_approved
-                  ? "text-green-800 dark:text-green-300"
-                  : "text-red-800 dark:text-red-300"
-              }`}>
-                {invoice.approval_notes}
-              </p>
+          {/* Bank Account */}
+          {company.bank_account && (
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Cont bancar (IBAN)</p>
+              <p className="font-mono font-semibold">{company.bank_account}</p>
             </div>
           )}
 
-          {/* Notes */}
-          {invoice.notes && (
+          {/* Notes - only show if not already shown in workflow */}
+          {invoice.notes && !invoice.approval_notes && (
             <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2">Observații</p>
               <p className="text-sm text-amber-800 dark:text-amber-300">{invoice.notes}</p>

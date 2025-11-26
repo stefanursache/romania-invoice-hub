@@ -150,20 +150,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   };
 
   const handleSwitchWorkspace = async (workspaceId: string) => {
-    sessionStorage.setItem("active_workspace_owner", workspaceId);
-    setActiveWorkspaceId(workspaceId);
-    
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("company_name")
-      .eq("id", workspaceId)
-      .single();
-    
-    setViewingCompany(profile?.company_name || null);
-    toast.success(`${t('common.viewing')}: ${profile?.company_name}`);
-    
-    // Reload current page to refresh data
-    window.location.reload();
+    // Navigate to the company view page
+    navigate(`/company/${workspaceId}`);
   };
 
   const handleBackToAccountantDashboard = () => {
@@ -258,68 +246,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
             <p className="text-sm text-muted-foreground ml-[52px]">{user?.email}</p>
             
-            {userRole === "accountant" && availableWorkspaces.length > 0 && (
-              <div className="mt-3 ml-[52px]">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                     <Button variant="outline" size="sm" className="w-full justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-3 w-3" />
-                        <span className="truncate">
-                          {viewingCompany || t('breadcrumb.switchCompany')}
-                        </span>
-                      </div>
-                      <ChevronDown className="h-3 w-3 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent 
-                    align="start" 
-                    className="w-[240px] bg-popover z-50"
-                  >
-                    <DropdownMenuLabel>{t('breadcrumb.myCompanies')}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {availableWorkspaces.map((workspace) => (
-                      <DropdownMenuItem
-                        key={workspace.id}
-                        onClick={() => handleSwitchWorkspace(workspace.id)}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4" />
-                            <span className="truncate">{workspace.name}</span>
-                          </div>
-                          {activeWorkspaceId === workspace.id && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handleBackToAccountantDashboard}
-                      className="cursor-pointer"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      {t('accountantDashboard.yourCompanies')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
+            {/* Company switcher removed from sidebar - now only in top breadcrumb */}
           </div>
-
-          {userRole === "accountant" && viewingCompany && (
-            <Button
-              onClick={handleBackToAccountantDashboard}
-              variant="outline"
-              className="mb-4 justify-start gap-2"
-              size="sm"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {t('accountantDashboard.yourCompanies')}
-            </Button>
-          )}
 
           <nav className="flex-1 space-y-2">
             {navItems.map((item) => {
@@ -381,19 +309,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       <BreadcrumbSeparator />
                       <BreadcrumbItem>
                         <DropdownMenu>
-                          <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground max-w-[200px]">
+                          <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground max-w-[200px] focus:outline-none">
                             <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
                             <span className="truncate">{viewingCompany}</span>
                             <ChevronDown className="h-3 w-3 flex-shrink-0" />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-[280px] bg-popover z-50">
-                            <DropdownMenuLabel className="text-xs">{t('breadcrumb.switchCompany')}</DropdownMenuLabel>
+                          <DropdownMenuContent align="start" className="w-[280px] max-h-[300px] overflow-y-auto bg-background border shadow-lg z-[100]">
+                            <DropdownMenuLabel className="text-xs font-semibold">{t('breadcrumb.switchCompany')}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {availableWorkspaces.map((workspace) => (
                               <DropdownMenuItem
                                 key={workspace.id}
                                 onClick={() => handleSwitchWorkspace(workspace.id)}
-                                className="cursor-pointer text-sm"
+                                className="cursor-pointer hover:bg-accent focus:bg-accent"
                               >
                                 <div className="flex items-center justify-between w-full">
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -410,7 +338,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         </DropdownMenu>
                       </BreadcrumbItem>
                       
-                      {location.pathname !== "/dashboard" && location.pathname !== "/accountant-dashboard" && (
+                      {location.pathname !== "/dashboard" && 
+                       location.pathname !== "/accountant-dashboard" && 
+                       !location.pathname.startsWith("/company/") && (
                         <>
                           <BreadcrumbSeparator />
                           <BreadcrumbItem>

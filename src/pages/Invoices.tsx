@@ -739,23 +739,24 @@ const Invoices = () => {
                            )}
                          </Button>
                        )}
-                      {userRole === "owner" && invoice.status !== "sent" && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleSendToSPV(invoice.id)}
-                          disabled={sendingToSpv[invoice.id] || !invoice.accountant_approved}
-                          title={!invoice.accountant_approved ? "Factura trebuie aprobată de contabil" : "Trimite în SPV"}
-                          className="bg-primary hover:bg-primary/90"
-                        >
-                          {sendingToSpv[invoice.id] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                    </div>
+                       {/* Send to SPV button - shows after accountant approval for both owners and accountants */}
+                       {invoice.accountant_approved && invoice.status !== "paid" && (
+                         <Button
+                           size="sm"
+                           variant="default"
+                           onClick={() => handleSendToSPV(invoice.id)}
+                           disabled={sendingToSpv[invoice.id]}
+                           title="Trimite în SPV"
+                           className="bg-green-600 hover:bg-green-700"
+                         >
+                           {sendingToSpv[invoice.id] ? (
+                             <Loader2 className="h-4 w-4 animate-spin" />
+                           ) : (
+                             <Send className="h-4 w-4" />
+                           )}
+                         </Button>
+                       )}
+                     </div>
                   </div>
                 </CardContent>
               </Card>

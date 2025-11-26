@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   FileBarChart,
-  BookOpen
+  BookOpen,
+  Receipt
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -99,8 +100,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       >
         <div className="flex flex-col h-full p-4">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-primary">SmartInvoice</h1>
-            <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <Receipt className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">SmartInvoice</h1>
+            </div>
+            <p className="text-sm text-muted-foreground ml-[52px]">{user?.email}</p>
           </div>
 
           <nav className="flex-1 space-y-2">

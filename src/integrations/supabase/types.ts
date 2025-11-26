@@ -86,6 +86,57 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          currency: string
+          description: string | null
+          expense_date: string
+          id: string
+          image_url: string | null
+          merchant: string
+          notes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          vat_amount: number
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expense_date: string
+          id?: string
+          image_url?: string | null
+          merchant: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          vat_amount?: number
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expense_date?: string
+          id?: string
+          image_url?: string | null
+          merchant?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vat_amount?: number
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string | null

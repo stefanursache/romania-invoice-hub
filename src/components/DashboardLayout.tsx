@@ -68,6 +68,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/clients", icon: Users, label: "Clienți" },
     { href: "/invoices", icon: FileText, label: "Facturi" },
+    { href: "/expenses", icon: Receipt, label: "Cheltuieli" },
     { href: "/chart-of-accounts", icon: BookOpen, label: "Plan de Conturi" },
     { href: "/team", icon: Users, label: "Echipă" },
     { href: "/reports", icon: FileBarChart, label: "Rapoarte" },

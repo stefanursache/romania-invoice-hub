@@ -361,15 +361,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <main className="lg:ml-64 min-h-screen">
         {/* Breadcrumb Navigation for Accountants */}
         {userRole === "accountant" && (
-          <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20">
-            <div className="p-4 lg:px-8 lg:py-4">
+          <div className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20">
+            <div className="px-4 lg:px-8 py-2.5">
               <Breadcrumb>
-                <BreadcrumbList>
+                <BreadcrumbList className="text-sm">
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link to="/accountant-dashboard" className="flex items-center gap-2">
-                        <Home className="h-4 w-4" />
-                        {t('breadcrumb.myCompanies')}
+                      <Link to="/accountant-dashboard" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+                        <Home className="h-3.5 w-3.5" />
+                        <span className="max-w-[120px] truncate">{t('breadcrumb.myCompanies')}</span>
                       </Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
@@ -379,27 +379,27 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       <BreadcrumbSeparator />
                       <BreadcrumbItem>
                         <DropdownMenu>
-                          <DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground">
-                            <Building2 className="h-4 w-4" />
-                            {viewingCompany}
-                            <ChevronDown className="h-3 w-3" />
+                          <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground max-w-[200px]">
+                            <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="truncate">{viewingCompany}</span>
+                            <ChevronDown className="h-3 w-3 flex-shrink-0" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start" className="w-[280px] bg-popover z-50">
-                            <DropdownMenuLabel>{t('breadcrumb.switchCompany')}</DropdownMenuLabel>
+                            <DropdownMenuLabel className="text-xs">{t('breadcrumb.switchCompany')}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {availableWorkspaces.map((workspace) => (
                               <DropdownMenuItem
                                 key={workspace.id}
                                 onClick={() => handleSwitchWorkspace(workspace.id)}
-                                className="cursor-pointer"
+                                className="cursor-pointer text-sm"
                               >
                                 <div className="flex items-center justify-between w-full">
-                                  <div className="flex items-center gap-2">
-                                    <Building2 className="h-4 w-4" />
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
                                     <span className="truncate">{workspace.name}</span>
                                   </div>
                                   {activeWorkspaceId === workspace.id && (
-                                    <Check className="h-4 w-4 text-primary" />
+                                    <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 ml-2" />
                                   )}
                                 </div>
                               </DropdownMenuItem>
@@ -412,7 +412,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         <>
                           <BreadcrumbSeparator />
                           <BreadcrumbItem>
-                            <BreadcrumbPage>{getPageName(location.pathname)}</BreadcrumbPage>
+                            <BreadcrumbPage className="max-w-[150px] truncate text-sm">{getPageName(location.pathname)}</BreadcrumbPage>
                           </BreadcrumbItem>
                         </>
                       )}

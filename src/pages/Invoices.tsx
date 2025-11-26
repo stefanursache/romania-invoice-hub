@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { exportToCSV } from "@/utils/exportUtils";
 import { InvoiceImageUpload } from "@/components/InvoiceImageUpload";
+import { InvoicePreview } from "@/components/InvoicePreview";
 import { 
   validateProfileForEFactura, 
   validateClientForEFactura,
@@ -42,6 +43,10 @@ const Invoices = () => {
   const [sendingToSpv, setSendingToSpv] = useState<Record<string, boolean>>({});
   const [userRole, setUserRole] = useState<string>("owner");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState<any>(null);
+  const [previewItems, setPreviewItems] = useState<any[]>([]);
+  const [previewCompany, setPreviewCompany] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -357,6 +362,66 @@ const Invoices = () => {
     toast.success("Facturi exportate în CSV!");
   };
 
+  const handlePreviewInvoice = async (invoiceId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch invoice with all data
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          clients (
+            name,
+            cui_cif,
+            reg_com,
+            address,
+            email,
+            phone
+          )
+        `)
+        .eq("id", invoiceId)
+        .single();
+
+      if (invoiceError || !invoice) {
+        toast.error("Eroare la încărcarea facturii");
+        return;
+      }
+
+      // Fetch invoice items
+      const { data: items, error: itemsError } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", invoiceId);
+
+      if (itemsError) {
+        toast.error("Eroare la încărcarea liniilor");
+        return;
+      }
+
+      // Fetch user profile
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        toast.error("Eroare la încărcarea profilului");
+        return;
+      }
+
+      setPreviewInvoice(invoice);
+      setPreviewItems(items || []);
+      setPreviewCompany(profile);
+      setShowPreview(true);
+    } catch (error) {
+      console.error("Error loading preview:", error);
+      toast.error("Eroare la încărcarea preview-ului");
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -465,6 +530,14 @@ const Invoices = () => {
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
+                        variant="ghost"
+                        onClick={() => handlePreviewInvoice(invoice.id)}
+                        title="Preview factură"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="outline"
                         onClick={() => handleDownloadPDF(invoice.id)}
                         disabled={downloadingPdf[invoice.id]}
@@ -512,6 +585,14 @@ const Invoices = () => {
             ))}
           </div>
         )}
+
+        <InvoicePreview
+          open={showPreview}
+          onOpenChange={setShowPreview}
+          invoice={previewInvoice}
+          items={previewItems}
+          company={previewCompany}
+        />
       </div>
     </DashboardLayout>
   );

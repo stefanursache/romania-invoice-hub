@@ -43,6 +43,154 @@ CREATE TYPE public.app_role AS ENUM (
 
 
 --
+-- Name: backfill_profile_emails(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.backfill_profile_emails() RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  UPDATE public.profiles p
+  SET email = u.email
+  FROM auth.users u
+  WHERE p.id = u.id AND (p.email IS NULL OR p.email = '');
+END;
+$$;
+
+
+--
+-- Name: check_rate_limit(uuid, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_rate_limit(_user_id uuid, _action text, _max_attempts integer, _window_minutes integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  _count integer;
+  _window_start timestamptz;
+BEGIN
+  -- Get current count for this action
+  SELECT count, window_start INTO _count, _window_start
+  FROM public.rate_limits
+  WHERE user_id = _user_id AND action = _action;
+  
+  -- If no record exists or window expired, create/reset
+  IF _count IS NULL OR _window_start < (now() - (_window_minutes || ' minutes')::interval) THEN
+    INSERT INTO public.rate_limits (user_id, action, count, window_start)
+    VALUES (_user_id, _action, 1, now())
+    ON CONFLICT (user_id, action) 
+    DO UPDATE SET count = 1, window_start = now();
+    RETURN true;
+  END IF;
+  
+  -- Check if limit exceeded
+  IF _count >= _max_attempts THEN
+    RETURN false;
+  END IF;
+  
+  -- Increment counter
+  UPDATE public.rate_limits
+  SET count = count + 1
+  WHERE user_id = _user_id AND action = _action;
+  
+  RETURN true;
+END;
+$$;
+
+
+--
+-- Name: create_standard_romanian_accounts(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_standard_romanian_accounts(_user_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  -- Check if user already has accounts
+  IF EXISTS (SELECT 1 FROM public.accounts WHERE user_id = _user_id) THEN
+    RETURN;
+  END IF;
+
+  -- Insert standard Romanian accounts
+  INSERT INTO public.accounts (user_id, account_code, account_name, account_type) VALUES
+    -- Assets (Active)
+    (_user_id, '5121', 'Conturi la bănci în lei', 'asset'),
+    (_user_id, '531', 'Casa în lei', 'asset'),
+    (_user_id, '411', 'Clienți', 'asset'),
+    (_user_id, '4426', 'TVA deductibilă', 'asset'),
+    (_user_id, '3011', 'Materii prime', 'asset'),
+    
+    -- Liabilities (Pasive)
+    (_user_id, '401', 'Furnizori', 'liability'),
+    (_user_id, '4111', 'Furnizori - facturi nesosite', 'liability'),
+    (_user_id, '4427', 'TVA colectată', 'liability'),
+    (_user_id, '419', 'Clienți creditori', 'liability'),
+    
+    -- Equity (Capital)
+    (_user_id, '1012', 'Capital subscris vărsat', 'equity'),
+    (_user_id, '117', 'Rezultatul reportat', 'equity'),
+    
+    -- Revenue (Venituri)
+    (_user_id, '707', 'Venituri din vânzarea mărfurilor', 'revenue'),
+    (_user_id, '704', 'Venituri din lucrări executate și servicii prestate', 'revenue'),
+    (_user_id, '706', 'Venituri din redevenţe, locaţii de gestiune şi chirii', 'revenue'),
+    
+    -- Expenses (Cheltuieli)
+    (_user_id, '607', 'Cheltuieli privind mărfurile', 'expense'),
+    (_user_id, '628', 'Alte cheltuieli cu serviciile executate de terți', 'expense'),
+    (_user_id, '635', 'Cheltuieli cu alte impozite, taxe și vărsăminte asimilate', 'expense'),
+    (_user_id, '6058', 'Alte cheltuieli de personal', 'expense'),
+    (_user_id, '611', 'Cheltuieli cu întreținerea și reparațiile', 'expense'),
+    (_user_id, '626', 'Cheltuieli poștale și taxe de telecomunicații', 'expense');
+END;
+$$;
+
+
+--
+-- Name: get_business_user_by_email(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_business_user_by_email(user_email text) RETURNS TABLE(user_id uuid, email text, company_name text)
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    p.id AS user_id,
+    p.email AS email,
+    p.company_name
+  FROM public.profiles p
+  INNER JOIN public.user_roles ur ON p.id = ur.user_id
+  WHERE LOWER(p.email) = LOWER(user_email)
+    AND ur.role = 'business';
+END;
+$$;
+
+
+--
+-- Name: get_client_contact_sanitized(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_client_contact_sanitized(_workspace_owner_id uuid) RETURNS TABLE(id uuid, company_name text, city text, country text)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  SELECT 
+    p.id,
+    p.company_name,
+    p.city,
+    p.country
+  FROM public.profiles p
+  WHERE p.id = _workspace_owner_id
+    AND public.has_workspace_access(_workspace_owner_id, auth.uid());
+$$;
+
+
+--
 -- Name: get_user_role(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -81,11 +229,27 @@ CREATE FUNCTION public.handle_new_user() RETURNS trigger
     SET search_path TO 'public'
     AS $$
 BEGIN
-  INSERT INTO public.profiles (id, company_name)
+  INSERT INTO public.profiles (id, company_name, email)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'company_name', 'My Company')
+    COALESCE(NEW.raw_user_meta_data->>'company_name', 'My Company'),
+    NEW.email
   );
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: handle_new_user_accounts(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.handle_new_user_accounts() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  PERFORM public.create_standard_romanian_accounts(NEW.id);
   RETURN NEW;
 END;
 $$;
@@ -143,6 +307,37 @@ $$;
 
 
 --
+-- Name: log_audit_event(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.log_audit_event() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  -- Log the operation
+  INSERT INTO public.audit_logs (
+    user_id,
+    table_name,
+    operation,
+    record_id,
+    old_data,
+    new_data
+  ) VALUES (
+    auth.uid(),
+    TG_TABLE_NAME,
+    TG_OP,
+    COALESCE(NEW.id, OLD.id),
+    CASE WHEN TG_OP = 'DELETE' OR TG_OP = 'UPDATE' THEN to_jsonb(OLD) ELSE NULL END,
+    CASE WHEN TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN to_jsonb(NEW) ELSE NULL END
+  );
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+
+--
 -- Name: update_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -160,6 +355,23 @@ $$;
 SET default_table_access_method = heap;
 
 --
+-- Name: access_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.access_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    accountant_user_id uuid NOT NULL,
+    business_owner_email text NOT NULL,
+    business_owner_id uuid,
+    status text DEFAULT 'pending'::text NOT NULL,
+    requested_at timestamp with time zone DEFAULT now() NOT NULL,
+    responded_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT access_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))
+);
+
+
+--
 -- Name: accounts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -169,6 +381,42 @@ CREATE TABLE public.accounts (
     account_code text NOT NULL,
     account_name text NOT NULL,
     account_type text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: audit_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit_logs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    table_name text NOT NULL,
+    operation text NOT NULL,
+    record_id uuid,
+    old_data jsonb,
+    new_data jsonb,
+    ip_address inet,
+    user_agent text,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: bank_statements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.bank_statements (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    file_name text NOT NULL,
+    file_path text NOT NULL,
+    file_size bigint NOT NULL,
+    upload_date timestamp with time zone DEFAULT now() NOT NULL,
+    statement_date date,
+    notes text,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );
@@ -189,6 +437,18 @@ CREATE TABLE public.clients (
     phone text,
     payment_terms integer DEFAULT 30,
     created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: currency_rates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.currency_rates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    currency_code text NOT NULL,
+    rate_to_ron numeric(10,4) NOT NULL,
     updated_at timestamp with time zone DEFAULT now()
 );
 
@@ -280,6 +540,20 @@ CREATE TABLE public.profiles (
 
 
 --
+-- Name: rate_limits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_limits (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    action text NOT NULL,
+    count integer DEFAULT 1,
+    window_start timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
 -- Name: saft_exports; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -309,6 +583,20 @@ CREATE TABLE public.user_roles (
 
 
 --
+-- Name: user_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_sessions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    ip_address inet,
+    user_agent text,
+    last_activity timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
 -- Name: workspace_members; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -320,6 +608,14 @@ CREATE TABLE public.workspace_members (
     invited_at timestamp with time zone DEFAULT now(),
     created_at timestamp with time zone DEFAULT now()
 );
+
+
+--
+-- Name: access_requests access_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT access_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -339,11 +635,43 @@ ALTER TABLE ONLY public.accounts
 
 
 --
+-- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_logs
+    ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: bank_statements bank_statements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bank_statements
+    ADD CONSTRAINT bank_statements_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: clients clients_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.clients
     ADD CONSTRAINT clients_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: currency_rates currency_rates_currency_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.currency_rates
+    ADD CONSTRAINT currency_rates_currency_code_key UNIQUE (currency_code);
+
+
+--
+-- Name: currency_rates currency_rates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.currency_rates
+    ADD CONSTRAINT currency_rates_pkey PRIMARY KEY (id);
 
 
 --
@@ -387,6 +715,22 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: rate_limits rate_limits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_limits
+    ADD CONSTRAINT rate_limits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: rate_limits rate_limits_user_id_action_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_limits
+    ADD CONSTRAINT rate_limits_user_id_action_key UNIQUE (user_id, action);
+
+
+--
 -- Name: saft_exports saft_exports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -411,6 +755,14 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
+-- Name: user_sessions user_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: workspace_members workspace_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -424,6 +776,41 @@ ALTER TABLE ONLY public.workspace_members
 
 ALTER TABLE ONLY public.workspace_members
     ADD CONSTRAINT workspace_members_workspace_owner_id_member_user_id_key UNIQUE (workspace_owner_id, member_user_id);
+
+
+--
+-- Name: idx_access_requests_accountant; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_access_requests_accountant ON public.access_requests USING btree (accountant_user_id);
+
+
+--
+-- Name: idx_access_requests_business_owner; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_access_requests_business_owner ON public.access_requests USING btree (business_owner_id);
+
+
+--
+-- Name: idx_access_requests_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_access_requests_status ON public.access_requests USING btree (status);
+
+
+--
+-- Name: idx_audit_logs_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_logs_created_at ON public.audit_logs USING btree (created_at DESC);
+
+
+--
+-- Name: idx_audit_logs_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id);
 
 
 --
@@ -441,10 +828,66 @@ CREATE INDEX idx_expenses_user_id ON public.expenses USING btree (user_id);
 
 
 --
+-- Name: idx_rate_limits_user_action; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_rate_limits_user_action ON public.rate_limits USING btree (user_id, action);
+
+
+--
+-- Name: idx_user_sessions_last_activity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_sessions_last_activity ON public.user_sessions USING btree (last_activity DESC);
+
+
+--
+-- Name: idx_user_sessions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_sessions_user_id ON public.user_sessions USING btree (user_id);
+
+
+--
+-- Name: access_requests audit_access_requests; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER audit_access_requests AFTER INSERT OR DELETE OR UPDATE ON public.access_requests FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
+
+
+--
+-- Name: user_roles audit_user_roles; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER audit_user_roles AFTER INSERT OR DELETE OR UPDATE ON public.user_roles FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
+
+
+--
+-- Name: workspace_members audit_workspace_members; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER audit_workspace_members AFTER INSERT OR DELETE OR UPDATE ON public.workspace_members FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
+
+
+--
+-- Name: profiles on_profile_created_create_accounts; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER on_profile_created_create_accounts AFTER INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_accounts();
+
+
+--
 -- Name: accounts update_accounts_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON public.accounts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: bank_statements update_bank_statements_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_bank_statements_updated_at BEFORE UPDATE ON public.bank_statements FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -473,6 +916,14 @@ CREATE TRIGGER update_invoices_updated_at BEFORE UPDATE ON public.invoices FOR E
 --
 
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: audit_logs audit_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_logs
+    ADD CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
 
 
 --
@@ -516,11 +967,27 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: rate_limits rate_limits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_limits
+    ADD CONSTRAINT rate_limits_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_roles
     ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_sessions user_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
 --
@@ -540,6 +1007,54 @@ ALTER TABLE ONLY public.workspace_members
 
 
 --
+-- Name: access_requests Accountants can create access requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Accountants can create access requests" ON public.access_requests FOR INSERT TO authenticated WITH CHECK (((auth.uid() = accountant_user_id) AND public.is_accountant(auth.uid())));
+
+
+--
+-- Name: access_requests Accountants can view own requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Accountants can view own requests" ON public.access_requests FOR SELECT TO authenticated USING ((auth.uid() = accountant_user_id));
+
+
+--
+-- Name: currency_rates Authenticated users can view currency rates; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Authenticated users can view currency rates" ON public.currency_rates FOR SELECT TO authenticated USING (true);
+
+
+--
+-- Name: access_requests Business owners can respond to requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Business owners can respond to requests" ON public.access_requests FOR UPDATE TO authenticated USING (((auth.uid() = business_owner_id) OR (auth.uid() IN ( SELECT profiles.id
+   FROM public.profiles
+  WHERE (profiles.email = access_requests.business_owner_email))))) WITH CHECK (((auth.uid() = business_owner_id) OR (auth.uid() IN ( SELECT profiles.id
+   FROM public.profiles
+  WHERE (profiles.email = access_requests.business_owner_email)))));
+
+
+--
+-- Name: access_requests Business owners can view requests by email; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Business owners can view requests by email" ON public.access_requests FOR SELECT TO authenticated USING ((lower(business_owner_email) IN ( SELECT lower(profiles.email) AS lower
+   FROM public.profiles
+  WHERE (profiles.id = auth.uid()))));
+
+
+--
+-- Name: access_requests Business owners can view requests to them; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Business owners can view requests to them" ON public.access_requests FOR SELECT TO authenticated USING ((auth.uid() = business_owner_id));
+
+
+--
 -- Name: workspace_members Only owners can invite members; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -554,6 +1069,13 @@ CREATE POLICY "Only owners can remove members" ON public.workspace_members FOR D
 
 
 --
+-- Name: user_roles System can delete roles; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "System can delete roles" ON public.user_roles FOR DELETE USING (false);
+
+
+--
 -- Name: saft_exports Users can delete own SAF-T exports; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -565,6 +1087,13 @@ CREATE POLICY "Users can delete own SAF-T exports" ON public.saft_exports FOR DE
 --
 
 CREATE POLICY "Users can delete own accounts" ON public.accounts FOR DELETE USING ((auth.uid() = user_id));
+
+
+--
+-- Name: bank_statements Users can delete own bank statements; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete own bank statements" ON public.bank_statements FOR DELETE USING ((auth.uid() = user_id));
 
 
 --
@@ -598,6 +1127,13 @@ CREATE POLICY "Users can delete own invoices" ON public.invoices FOR DELETE USIN
 
 
 --
+-- Name: profiles Users can delete their own profile; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete their own profile" ON public.profiles FOR DELETE USING ((auth.uid() = id));
+
+
+--
 -- Name: saft_exports Users can insert own SAF-T exports; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -609,6 +1145,13 @@ CREATE POLICY "Users can insert own SAF-T exports" ON public.saft_exports FOR IN
 --
 
 CREATE POLICY "Users can insert own accounts" ON public.accounts FOR INSERT WITH CHECK ((auth.uid() = user_id));
+
+
+--
+-- Name: bank_statements Users can insert own bank statements; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert own bank statements" ON public.bank_statements FOR INSERT WITH CHECK ((auth.uid() = user_id));
 
 
 --
@@ -663,6 +1206,13 @@ CREATE POLICY "Users can update own accounts" ON public.accounts FOR UPDATE USIN
 
 
 --
+-- Name: bank_statements Users can update own bank statements; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update own bank statements" ON public.bank_statements FOR UPDATE USING ((auth.uid() = user_id));
+
+
+--
 -- Name: clients Users can update own clients; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -700,17 +1250,31 @@ CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING
 
 
 --
--- Name: saft_exports Users can view own SAF-T exports; Type: POLICY; Schema: public; Owner: -
+-- Name: saft_exports Users can update their own exports; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can view own SAF-T exports" ON public.saft_exports FOR SELECT USING ((auth.uid() = user_id));
+CREATE POLICY "Users can update their own exports" ON public.saft_exports FOR UPDATE USING ((auth.uid() = user_id)) WITH CHECK ((auth.uid() = user_id));
 
 
 --
--- Name: accounts Users can view own accounts; Type: POLICY; Schema: public; Owner: -
+-- Name: saft_exports Users can view own SAF-T exports or as accountant; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can view own accounts" ON public.accounts FOR SELECT USING ((auth.uid() = user_id));
+CREATE POLICY "Users can view own SAF-T exports or as accountant" ON public.saft_exports FOR SELECT TO authenticated USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
+
+
+--
+-- Name: accounts Users can view own accounts or as accountant; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own accounts or as accountant" ON public.accounts FOR SELECT TO authenticated USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
+
+
+--
+-- Name: bank_statements Users can view own bank statements; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own bank statements" ON public.bank_statements FOR SELECT USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
 
 
 --
@@ -744,10 +1308,12 @@ CREATE POLICY "Users can view own invoices or as accountant" ON public.invoices 
 
 
 --
--- Name: profiles Users can view own profile; Type: POLICY; Schema: public; Owner: -
+-- Name: profiles Users can view own profile or as accountant; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING ((auth.uid() = id));
+CREATE POLICY "Users can view own profile or as accountant" ON public.profiles FOR SELECT TO authenticated USING (((auth.uid() = id) OR (EXISTS ( SELECT 1
+   FROM public.workspace_members
+  WHERE ((workspace_members.workspace_owner_id = profiles.id) AND (workspace_members.member_user_id = auth.uid()))))));
 
 
 --
@@ -758,11 +1324,52 @@ CREATE POLICY "Users can view own role" ON public.user_roles FOR SELECT TO authe
 
 
 --
+-- Name: audit_logs Users can view their own audit logs; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own audit logs" ON public.audit_logs FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
+-- Name: rate_limits Users can view their own rate limits; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own rate limits" ON public.rate_limits FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
+-- Name: user_sessions Users can view their own sessions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own sessions" ON public.user_sessions FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
 -- Name: workspace_members Users can view workspaces they own or are members of; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Users can view workspaces they own or are members of" ON public.workspace_members FOR SELECT USING (((workspace_owner_id = auth.uid()) OR (member_user_id = auth.uid())));
 
+
+--
+-- Name: user_roles Users cannot change their own role; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users cannot change their own role" ON public.user_roles FOR UPDATE USING (false);
+
+
+--
+-- Name: workspace_members Workspace owners can update member roles; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Workspace owners can update member roles" ON public.workspace_members FOR UPDATE USING ((auth.uid() = workspace_owner_id)) WITH CHECK ((auth.uid() = workspace_owner_id));
+
+
+--
+-- Name: access_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.access_requests ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: accounts; Type: ROW SECURITY; Schema: public; Owner: -
@@ -771,10 +1378,28 @@ CREATE POLICY "Users can view workspaces they own or are members of" ON public.w
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: audit_logs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: bank_statements; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.bank_statements ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: clients; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: currency_rates; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.currency_rates ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: expenses; Type: ROW SECURITY; Schema: public; Owner: -
@@ -801,6 +1426,12 @@ ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: rate_limits; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: saft_exports; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -811,6 +1442,12 @@ ALTER TABLE public.saft_exports ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_sessions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: workspace_members; Type: ROW SECURITY; Schema: public; Owner: -

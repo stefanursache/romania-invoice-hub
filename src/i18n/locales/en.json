@@ -283,6 +283,24 @@
     "saftGenerated": "SAF-T XML generated successfully",
     "selectValidPeriod": "Please select a valid period"
   },
+  "notifications": {
+    "clientAlerts": "Client Alerts",
+    "clientAlertsDesc": "Issues that require your attention across all client companies",
+    "urgent": "Urgent",
+    "warning": "Warning",
+    "info": "Info",
+    "high": "High Priority",
+    "medium": "Medium Priority",
+    "low": "Information",
+    "allGood": "All Good!",
+    "noAlerts": "No alerts at this time. All your clients are up to date.",
+    "draftInvoices": "{{count}} draft invoice(s) need to be finalized",
+    "overdueInvoices": "{{count}} overdue invoice(s) require immediate attention",
+    "missingCompanyInfo": "Missing company information (CUI/CIF, Reg Com, or Address)",
+    "noRecentActivity": "No invoices created in the last 30 days",
+    "view": "View",
+    "errorLoading": "Error loading notifications"
+  },
   "breadcrumb": {
     "myCompanies": "My Companies",
     "switchCompany": "Switch Company"

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark, Settings, CheckCircle } from "lucide-react";
+import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark, Settings, CheckCircle, Send } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { exportToCSV } from "@/utils/exportUtils";
@@ -113,6 +113,7 @@ const CompanyView = () => {
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedInvoiceForApproval, setSelectedInvoiceForApproval] = useState<{ id: string; invoice_number: string } | null>(null);
   const [approvingInvoice, setApprovingInvoice] = useState<Record<string, boolean>>({});
+  const [sendingToSpv, setSendingToSpv] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkAccess();
@@ -419,6 +420,32 @@ const CompanyView = () => {
       toast.error(error.message || "Eroare la respingerea facturii");
     } finally {
       setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: false }));
+    }
+  };
+
+  const handleSendToSPV = async (invoiceId: string) => {
+    setSendingToSpv((prev) => ({ ...prev, [invoiceId]: true }));
+    
+    try {
+      const response = await supabase.functions.invoke("send-to-spv", {
+        body: { invoiceId },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      if (response.data?.success) {
+        toast.success("Factură trimisă în SPV cu succes!");
+        loadInvoices();
+      } else {
+        throw new Error(response.data?.error || "Eroare necunoscută");
+      }
+    } catch (error: any) {
+      console.error("Error sending to SPV:", error);
+      toast.error(error.message || "Eroare la trimitere în SPV");
+    } finally {
+      setSendingToSpv((prev) => ({ ...prev, [invoiceId]: false }));
     }
   };
 
@@ -815,6 +842,23 @@ const CompanyView = () => {
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <CheckCircle className="h-4 w-4" />
+                                  )}
+                                </Button>
+                               )}
+                              {/* Send to SPV button - shows after accountant approval */}
+                              {invoice.accountant_approved && invoice.status !== "paid" && (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleSendToSPV(invoice.id)}
+                                  disabled={sendingToSpv[invoice.id]}
+                                  title="Trimite în SPV"
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  {sendingToSpv[invoice.id] ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Send className="h-4 w-4" />
                                   )}
                                 </Button>
                               )}

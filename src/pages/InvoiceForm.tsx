@@ -8,12 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, Save, Send } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Plus, Trash2, Loader2, Save, Send, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Client {
   id: string;
   name: string;
+  payment_terms: number;
+}
+
+interface NewClientData {
+  name: string;
+  cui_cif: string;
+  reg_com: string;
+  address: string;
+  email: string;
+  phone: string;
   payment_terms: number;
 }
 
@@ -33,6 +44,7 @@ const InvoiceForm = () => {
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientMode, setClientMode] = useState<"existing" | "new">("existing");
   const [formData, setFormData] = useState({
     invoice_number: "",
     client_id: "",
@@ -40,6 +52,15 @@ const InvoiceForm = () => {
     due_date: "",
     currency: "RON",
     notes: "",
+  });
+  const [newClientData, setNewClientData] = useState<NewClientData>({
+    name: "",
+    cui_cif: "",
+    reg_com: "",
+    address: "",
+    email: "",
+    phone: "",
+    payment_terms: 30,
   });
   const [lineItems, setLineItems] = useState<LineItem[]>([
     {
@@ -233,9 +254,52 @@ const InvoiceForm = () => {
     }
   };
 
+  const handleNewClientPaymentTermsChange = (terms: number) => {
+    setNewClientData((prev) => ({ ...prev, payment_terms: terms }));
+    
+    const dueDate = new Date(formData.issue_date);
+    dueDate.setDate(dueDate.getDate() + terms);
+    setFormData((prev) => ({
+      ...prev,
+      due_date: dueDate.toISOString().split("T")[0],
+    }));
+  };
+
+  const createNewClient = async (userId: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .insert({
+          user_id: userId,
+          name: newClientData.name,
+          cui_cif: newClientData.cui_cif || null,
+          reg_com: newClientData.reg_com || null,
+          address: newClientData.address || null,
+          email: newClientData.email || null,
+          phone: newClientData.phone || null,
+          payment_terms: newClientData.payment_terms,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    } catch (error: any) {
+      console.error("Error creating client:", error);
+      toast.error(`Eroare la crearea clientului: ${error.message}`);
+      return null;
+    }
+  };
+
   const handleSubmit = async (status: "draft" | "sent") => {
-    if (!formData.client_id) {
+    // Validate client selection or new client data
+    if (clientMode === "existing" && !formData.client_id) {
       toast.error("Selectează un client");
+      return;
+    }
+
+    if (clientMode === "new" && !newClientData.name.trim()) {
+      toast.error("Introdu numele clientului");
       return;
     }
 
@@ -249,6 +313,19 @@ const InvoiceForm = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    let clientId = formData.client_id;
+
+    // Create new client if in "new" mode
+    if (clientMode === "new") {
+      const newClientId = await createNewClient(user.id);
+      if (!newClientId) {
+        setLoading(false);
+        return;
+      }
+      clientId = newClientId;
+      toast.success("Client nou adăugat!");
+    }
+
     const totals = calculateTotals();
 
     try {
@@ -258,6 +335,7 @@ const InvoiceForm = () => {
           .from("invoices")
           .update({
             ...formData,
+            client_id: clientId,
             ...totals,
             status,
           })
@@ -293,6 +371,7 @@ const InvoiceForm = () => {
             {
               user_id: user.id,
               ...formData,
+              client_id: clientId,
               ...totals,
               status,
             },
@@ -395,23 +474,118 @@ const InvoiceForm = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="client">Client *</Label>
-                <Select
-                  value={formData.client_id}
-                  onValueChange={handleClientChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selectează client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Client *</Label>
+                <RadioGroup value={clientMode} onValueChange={(value) => setClientMode(value as "existing" | "new")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="existing" id="existing" />
+                    <Label htmlFor="existing" className="cursor-pointer">Selectează client existent</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="new" id="new" />
+                    <Label htmlFor="new" className="cursor-pointer flex items-center gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      Adaugă client nou
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {clientMode === "existing" ? (
+                  <Select
+                    value={formData.client_id}
+                    onValueChange={handleClientChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selectează client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="space-y-4 p-4 border rounded-lg bg-accent/5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="client_name">Nume client *</Label>
+                        <Input
+                          id="client_name"
+                          placeholder="Ex: SRL Consulting"
+                          value={newClientData.name}
+                          onChange={(e) => setNewClientData({ ...newClientData, name: e.target.value })}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="client_cui">CUI/CIF</Label>
+                        <Input
+                          id="client_cui"
+                          placeholder="RO12345678"
+                          value={newClientData.cui_cif}
+                          onChange={(e) => setNewClientData({ ...newClientData, cui_cif: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="client_reg">Nr. Reg. Com.</Label>
+                        <Input
+                          id="client_reg"
+                          placeholder="J40/1234/2020"
+                          value={newClientData.reg_com}
+                          onChange={(e) => setNewClientData({ ...newClientData, reg_com: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="client_email">Email</Label>
+                        <Input
+                          id="client_email"
+                          type="email"
+                          placeholder="client@exemplu.ro"
+                          value={newClientData.email}
+                          onChange={(e) => setNewClientData({ ...newClientData, email: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="client_phone">Telefon</Label>
+                        <Input
+                          id="client_phone"
+                          placeholder="+40 123 456 789"
+                          value={newClientData.phone}
+                          onChange={(e) => setNewClientData({ ...newClientData, phone: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="client_payment">Termen plată (zile)</Label>
+                        <Input
+                          id="client_payment"
+                          type="number"
+                          min="0"
+                          value={newClientData.payment_terms}
+                          onChange={(e) => handleNewClientPaymentTermsChange(parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="client_address">Adresă</Label>
+                      <Textarea
+                        id="client_address"
+                        placeholder="Strada, număr, oraș, județ, cod poștal"
+                        value={newClientData.address}
+                        onChange={(e) => setNewClientData({ ...newClientData, address: e.target.value })}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="currency">Monedă</Label>

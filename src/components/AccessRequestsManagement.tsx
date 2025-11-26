@@ -38,8 +38,18 @@ export default function AccessRequestsManagement() {
         return;
       }
 
-      console.log("AccessRequestsManagement: Loading requests for user:", user.id);
+      console.log("AccessRequestsManagement: Current user ID:", user.id);
+      console.log("AccessRequestsManagement: Current user email:", user.email);
 
+      // First, let's check all access requests to debug
+      const { data: allRequests, error: allError } = await supabase
+        .from("access_requests")
+        .select("*");
+      
+      console.log("AccessRequestsManagement: All requests in DB:", allRequests);
+      console.log("AccessRequestsManagement: All requests error:", allError);
+
+      // Now load requests for this business owner
       const { data, error } = await supabase
         .from("access_requests")
         .select("*")
@@ -51,7 +61,8 @@ export default function AccessRequestsManagement() {
         throw error;
       }
 
-      console.log("AccessRequestsManagement: Loaded requests:", data?.length || 0);
+      console.log("AccessRequestsManagement: Loaded requests for user:", data?.length || 0);
+      console.log("AccessRequestsManagement: Request details:", data);
 
       // Fetch accountant profiles
       if (data && data.length > 0) {

@@ -416,6 +416,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backfill_profile_emails: { Args: never; Returns: undefined }
       get_business_user_by_email: {
         Args: { user_email: string }
         Returns: {

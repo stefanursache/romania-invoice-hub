@@ -70,30 +70,38 @@ const Invoices = () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
+      console.log("❌ No authenticated user");
       setLoading(false);
       return;
     }
 
-    console.log("🔐 Current user ID:", user.id);
+    console.log("========================================");
+    console.log("🔐 AUTHENTICATED USER ID:", user.id);
+    console.log("📧 User email:", user.email);
 
     // Check if user is an accountant
     const { data: memberData, error: memberError } = await supabase
       .from("workspace_members")
-      .select("role, workspace_owner_id")
+      .select("role, workspace_owner_id, member_user_id")
       .eq("member_user_id", user.id)
       .maybeSingle();
 
     if (memberError) {
       console.error("❌ Error fetching workspace member:", memberError);
     }
-    console.log("👥 Workspace member data:", memberData);
+    console.log("👥 WORKSPACE MEMBER DATA:", JSON.stringify(memberData, null, 2));
 
     // Explicitly check if role is 'accountant' from the enum
     const detectedRole = (memberData?.role === "accountant") ? "accountant" : "owner";
-    console.log("🎭 Detected role:", detectedRole);
-    console.log("🎭 Role type:", typeof detectedRole, detectedRole);
+    console.log("🎭 DETECTED ROLE:", detectedRole);
+    console.log("🎭 Role comparison:", {
+      memberDataRole: memberData?.role,
+      isAccountant: memberData?.role === "accountant",
+      finalRole: detectedRole
+    });
     
     setUserRole(detectedRole);
+    console.log("✅ UserRole state set to:", detectedRole);
     
     // Store workspace owner ID if accountant
     let ownerIdToUse = null;
@@ -132,13 +140,16 @@ const Invoices = () => {
     const { data, error } = await query;
 
     if (error) {
+      console.error("❌ Error loading invoices:", error);
       toast.error("Eroare la încărcarea facturilor");
-      console.error(error);
     } else {
-      console.log("📋 Loaded invoices:", data);
-      console.log("📊 Total invoices count:", data?.length);
+      console.log(`📊 LOADED ${data?.length || 0} INVOICES for role: ${detectedRole}`);
+      data?.forEach(inv => {
+        console.log(`  - Invoice ${inv.invoice_number}: status=${inv.status}, approved=${inv.accountant_approved}`);
+      });
       setInvoices(data || []);
     }
+    console.log("========================================");
     setLoading(false);
   };
 
@@ -702,11 +713,15 @@ const Invoices = () => {
                        </Button>
                        {(() => {
                          const shouldShow = userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent";
-                         console.log(`🔍 Invoice ${invoice.invoice_number} approval button check:`, {
-                           userRole,
+                         console.log(`🔍🔍🔍 Invoice ${invoice.invoice_number} BUTTON CHECK:`, {
+                           userRole: userRole,
+                           userRoleType: typeof userRole,
                            accountant_approved: invoice.accountant_approved,
                            status: invoice.status,
-                           shouldShow
+                           condition1: userRole === "accountant",
+                           condition2: !invoice.accountant_approved,
+                           condition3: invoice.status === "sent",
+                           shouldShow: shouldShow
                          });
                          return shouldShow;
                        })() && (

@@ -403,7 +403,7 @@ const InvoiceForm = () => {
       }
 
       toast.success(
-        status === "draft" ? "Factură salvată ca ciornă" : "Factură finalizată!"
+        status === "draft" ? "Factură salvată ca ciornă" : "Factură finalizată! Așteaptă aprobarea contabilului."
       );
       navigate("/invoices");
     } catch (error: any) {

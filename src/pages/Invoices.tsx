@@ -83,7 +83,14 @@ const Invoices = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
+    // Check if user is an accountant with workspace access
+    const { data: workspaces } = await supabase
+      .from("workspace_members")
+      .select("workspace_owner_id")
+      .eq("member_user_id", user.id);
+
+    // Build query to get user's own invoices + invoices from workspaces they have access to
+    let query = supabase
       .from("invoices")
       .select(`
         *,
@@ -91,8 +98,18 @@ const Invoices = () => {
           name
         )
       `)
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+
+    // If accountant, get invoices from all accessible workspaces
+    if (workspaces && workspaces.length > 0) {
+      const workspaceOwnerIds = workspaces.map(w => w.workspace_owner_id);
+      query = query.in("user_id", [user.id, ...workspaceOwnerIds]);
+    } else {
+      // Otherwise, just get user's own invoices
+      query = query.eq("user_id", user.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast.error("Eroare la încărcarea facturilor");
@@ -661,7 +678,7 @@ const Invoices = () => {
                           <FileCode className="h-4 w-4" />
                         )}
                       </Button>
-                      {userRole === "accountant" && !invoice.accountant_approved && (
+                      {userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent" && (
                         <Button
                           size="sm"
                           variant="default"

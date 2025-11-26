@@ -1,15 +1,1 @@
-project_id = "llolnevpdnpcidldbhnb"
-
-[functions.create-checkout-session]
-verify_jwt = true
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.retry-failed-payment]
-verify_jwt = true
-
-[functions.test-spv-credentials]
-verify_jwt = true
-
-
+project_id = "qfacqluemauiwmwwpuze"

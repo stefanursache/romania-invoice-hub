@@ -385,6 +385,32 @@ $$;
 
 
 --
+-- Name: update_product_stock_after_movement(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_product_stock_after_movement() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.products
+    SET current_stock = current_stock + 
+      CASE 
+        WHEN NEW.movement_type = 'in' THEN NEW.quantity
+        WHEN NEW.movement_type = 'out' THEN -NEW.quantity
+        WHEN NEW.movement_type = 'adjustment' THEN NEW.quantity
+        ELSE 0
+      END
+    WHERE id = NEW.product_id;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: update_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -576,6 +602,10 @@ CREATE TABLE public.invoices (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     invoice_type text DEFAULT 'invoice'::text,
+    accountant_approved boolean DEFAULT false,
+    approved_by uuid,
+    approved_at timestamp with time zone,
+    approval_notes text,
     CONSTRAINT invoices_invoice_type_check CHECK ((invoice_type = ANY (ARRAY['invoice'::text, 'proforma'::text]))),
     CONSTRAINT invoices_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'paid'::text, 'overdue'::text])))
 );
@@ -612,7 +642,32 @@ CREATE TABLE public.payment_transactions (
     description text,
     metadata jsonb,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    retry_available boolean DEFAULT true,
+    last_retry_at timestamp with time zone
+);
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.products (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    name text NOT NULL,
+    sku text,
+    description text,
+    category text,
+    unit_of_measure text DEFAULT 'buc'::text NOT NULL,
+    current_stock numeric DEFAULT 0 NOT NULL,
+    minimum_stock numeric DEFAULT 0,
+    purchase_price numeric DEFAULT 0 NOT NULL,
+    sale_price numeric DEFAULT 0 NOT NULL,
+    vat_rate integer DEFAULT 19 NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -675,6 +730,26 @@ CREATE TABLE public.saft_exports (
 
 
 --
+-- Name: stock_movements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stock_movements (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    movement_type text NOT NULL,
+    quantity numeric NOT NULL,
+    unit_price numeric,
+    reference_type text,
+    reference_id uuid,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by uuid NOT NULL,
+    CONSTRAINT stock_movements_movement_type_check CHECK ((movement_type = ANY (ARRAY['in'::text, 'out'::text, 'adjustment'::text])))
+);
+
+
+--
 -- Name: user_roles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -717,6 +792,23 @@ CREATE TABLE public.user_subscriptions (
     cancel_at_period_end boolean DEFAULT false,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: webhook_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.webhook_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    event_id text NOT NULL,
+    event_type text NOT NULL,
+    event_data jsonb NOT NULL,
+    processed_at timestamp with time zone DEFAULT now(),
+    status text DEFAULT 'processed'::text NOT NULL,
+    error_message text,
+    retry_count integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -863,6 +955,22 @@ ALTER TABLE ONLY public.payment_transactions
 
 
 --
+-- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: products products_user_id_sku_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_user_id_sku_key UNIQUE (user_id, sku);
+
+
+--
 -- Name: profiles profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -895,6 +1003,14 @@ ALTER TABLE ONLY public.saft_exports
 
 
 --
+-- Name: stock_movements stock_movements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT stock_movements_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -924,6 +1040,22 @@ ALTER TABLE ONLY public.user_sessions
 
 ALTER TABLE ONLY public.user_subscriptions
     ADD CONSTRAINT user_subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: webhook_events webhook_events_event_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_events
+    ADD CONSTRAINT webhook_events_event_id_key UNIQUE (event_id);
+
+
+--
+-- Name: webhook_events webhook_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_events
+    ADD CONSTRAINT webhook_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -1006,6 +1138,13 @@ CREATE INDEX idx_invitation_codes_expires_at ON public.invitation_codes USING bt
 
 
 --
+-- Name: idx_invoices_approval; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_invoices_approval ON public.invoices USING btree (accountant_approved, user_id);
+
+
+--
 -- Name: idx_payment_transactions_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1020,10 +1159,45 @@ CREATE INDEX idx_payment_transactions_user_id ON public.payment_transactions USI
 
 
 --
+-- Name: idx_products_sku; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_products_sku ON public.products USING btree (user_id, sku);
+
+
+--
+-- Name: idx_products_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_products_user_id ON public.products USING btree (user_id);
+
+
+--
 -- Name: idx_rate_limits_user_action; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_rate_limits_user_action ON public.rate_limits USING btree (user_id, action);
+
+
+--
+-- Name: idx_stock_movements_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_movements_created_at ON public.stock_movements USING btree (created_at DESC);
+
+
+--
+-- Name: idx_stock_movements_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_movements_product_id ON public.stock_movements USING btree (product_id);
+
+
+--
+-- Name: idx_stock_movements_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_movements_user_id ON public.stock_movements USING btree (user_id);
 
 
 --
@@ -1055,6 +1229,27 @@ CREATE INDEX idx_user_subscriptions_user_id ON public.user_subscriptions USING b
 
 
 --
+-- Name: idx_webhook_events_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_webhook_events_created_at ON public.webhook_events USING btree (created_at DESC);
+
+
+--
+-- Name: idx_webhook_events_event_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_webhook_events_event_type ON public.webhook_events USING btree (event_type);
+
+
+--
+-- Name: idx_webhook_events_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_webhook_events_status ON public.webhook_events USING btree (status);
+
+
+--
 -- Name: access_requests audit_access_requests; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1080,6 +1275,13 @@ CREATE TRIGGER audit_workspace_members AFTER INSERT OR DELETE OR UPDATE ON publi
 --
 
 CREATE TRIGGER on_profile_created_create_accounts AFTER INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_accounts();
+
+
+--
+-- Name: stock_movements trigger_update_product_stock; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_update_product_stock AFTER INSERT ON public.stock_movements FOR EACH ROW EXECUTE FUNCTION public.update_product_stock_after_movement();
 
 
 --
@@ -1118,6 +1320,13 @@ CREATE TRIGGER update_invoices_updated_at BEFORE UPDATE ON public.invoices FOR E
 
 
 --
+-- Name: products update_products_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
 -- Name: profiles update_profiles_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1146,6 +1355,14 @@ ALTER TABLE ONLY public.clients
 
 ALTER TABLE ONLY public.invoice_items
     ADD CONSTRAINT invoice_items_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES public.invoices(id) ON DELETE CASCADE;
+
+
+--
+-- Name: invoices invoices_approved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoices
+    ADD CONSTRAINT invoices_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES auth.users(id);
 
 
 --
@@ -1178,6 +1395,14 @@ ALTER TABLE ONLY public.profiles
 
 ALTER TABLE ONLY public.rate_limits
     ADD CONSTRAINT rate_limits_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: stock_movements stock_movements_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT stock_movements_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;
 
 
 --
@@ -1220,10 +1445,10 @@ CREATE POLICY "Accountants can create access requests" ON public.access_requests
 
 
 --
--- Name: invitation_codes Accountants can mark codes as used; Type: POLICY; Schema: public; Owner: -
+-- Name: invitation_codes Accountants can mark codes as used when joining; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Accountants can mark codes as used" ON public.invitation_codes FOR UPDATE TO authenticated USING (((NOT is_used) AND (expires_at > now()))) WITH CHECK (((is_used = true) AND (used_by = auth.uid())));
+CREATE POLICY "Accountants can mark codes as used when joining" ON public.invitation_codes FOR UPDATE USING (((NOT is_used) AND (expires_at > now()) AND public.is_accountant(auth.uid()))) WITH CHECK (((is_used = true) AND (used_by = auth.uid())));
 
 
 --
@@ -1241,17 +1466,17 @@ CREATE POLICY "Admins can manage user roles" ON public.user_roles TO authenticat
 
 
 --
+-- Name: webhook_events Admins can manage webhook events; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can manage webhook events" ON public.webhook_events USING (public.is_admin(auth.uid())) WITH CHECK (public.is_admin(auth.uid()));
+
+
+--
 -- Name: access_requests Admins can view all access requests; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Admins can view all access requests" ON public.access_requests FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
-
-
---
--- Name: clients Admins can view all clients; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins can view all clients" ON public.clients FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
 
 
 --
@@ -1266,13 +1491,6 @@ CREATE POLICY "Admins can view all expenses" ON public.expenses FOR SELECT TO au
 --
 
 CREATE POLICY "Admins can view all invoices" ON public.invoices FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
-
-
---
--- Name: profiles Admins can view all profiles; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
 
 
 --
@@ -1297,10 +1515,24 @@ CREATE POLICY "Admins can view all user roles" ON public.user_roles FOR SELECT T
 
 
 --
+-- Name: webhook_events Admins can view all webhook events; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all webhook events" ON public.webhook_events FOR SELECT USING (public.is_admin(auth.uid()));
+
+
+--
 -- Name: workspace_members Admins can view all workspace members; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Admins can view all workspace members" ON public.workspace_members FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: profiles Admins can view own profile only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view own profile only" ON public.profiles FOR SELECT USING ((auth.uid() = id));
 
 
 --
@@ -1408,6 +1640,13 @@ CREATE POLICY "Deny anonymous access" ON public.invoices AS RESTRICTIVE TO anon 
 
 
 --
+-- Name: products Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.products USING (false);
+
+
+--
 -- Name: profiles Deny anonymous access; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1419,6 +1658,13 @@ CREATE POLICY "Deny anonymous access" ON public.profiles AS RESTRICTIVE TO anon 
 --
 
 CREATE POLICY "Deny anonymous access" ON public.saft_exports AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: stock_movements Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.stock_movements USING (false);
 
 
 --
@@ -1450,13 +1696,6 @@ CREATE POLICY "Only admins can manage payment config" ON public.payment_gateway_
 
 
 --
--- Name: workspace_members Only owners can invite members; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Only owners can invite members" ON public.workspace_members FOR INSERT WITH CHECK ((workspace_owner_id = auth.uid()));
-
-
---
 -- Name: workspace_members Only owners can remove members; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1468,6 +1707,15 @@ CREATE POLICY "Only owners can remove members" ON public.workspace_members FOR D
 --
 
 CREATE POLICY "Owners can create codes" ON public.invitation_codes FOR INSERT TO authenticated WITH CHECK ((workspace_owner_id = auth.uid()));
+
+
+--
+-- Name: workspace_members Owners can invite and accountants can join with valid codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Owners can invite and accountants can join with valid codes" ON public.workspace_members FOR INSERT WITH CHECK (((workspace_owner_id = auth.uid()) OR ((member_user_id = auth.uid()) AND public.is_accountant(auth.uid()) AND (EXISTS ( SELECT 1
+   FROM public.invitation_codes ic
+  WHERE ((ic.workspace_owner_id = workspace_members.workspace_owner_id) AND (ic.is_used = false) AND (ic.expires_at > now())))))));
 
 
 --
@@ -1492,10 +1740,10 @@ CREATE POLICY "Users can delete own SAF-T exports" ON public.saft_exports FOR DE
 
 
 --
--- Name: accounts Users can delete own accounts; Type: POLICY; Schema: public; Owner: -
+-- Name: accounts Users can delete own accounts or as accountant; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can delete own accounts" ON public.accounts FOR DELETE USING ((auth.uid() = user_id));
+CREATE POLICY "Users can delete own accounts or as accountant" ON public.accounts FOR DELETE USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
 
 
 --
@@ -1536,6 +1784,20 @@ CREATE POLICY "Users can delete own invoices" ON public.invoices FOR DELETE USIN
 
 
 --
+-- Name: stock_movements Users can delete own movements; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete own movements" ON public.stock_movements FOR DELETE USING ((auth.uid() = user_id));
+
+
+--
+-- Name: products Users can delete own products; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete own products" ON public.products FOR DELETE USING ((auth.uid() = user_id));
+
+
+--
 -- Name: profiles Users can delete their own profile; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1550,10 +1812,10 @@ CREATE POLICY "Users can insert own SAF-T exports" ON public.saft_exports FOR IN
 
 
 --
--- Name: accounts Users can insert own accounts; Type: POLICY; Schema: public; Owner: -
+-- Name: accounts Users can insert own accounts or as accountant; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can insert own accounts" ON public.accounts FOR INSERT WITH CHECK ((auth.uid() = user_id));
+CREATE POLICY "Users can insert own accounts or as accountant" ON public.accounts FOR INSERT WITH CHECK (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
 
 
 --
@@ -1594,6 +1856,20 @@ CREATE POLICY "Users can insert own invoices" ON public.invoices FOR INSERT WITH
 
 
 --
+-- Name: stock_movements Users can insert own movements; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert own movements" ON public.stock_movements FOR INSERT WITH CHECK (((auth.uid() = user_id) AND (auth.uid() = created_by)));
+
+
+--
+-- Name: products Users can insert own products; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert own products" ON public.products FOR INSERT WITH CHECK ((auth.uid() = user_id));
+
+
+--
 -- Name: profiles Users can insert own profile; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1608,10 +1884,17 @@ CREATE POLICY "Users can insert own role" ON public.user_roles FOR INSERT TO aut
 
 
 --
--- Name: accounts Users can update own accounts; Type: POLICY; Schema: public; Owner: -
+-- Name: clients Users can only view their own clients; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can update own accounts" ON public.accounts FOR UPDATE USING ((auth.uid() = user_id));
+CREATE POLICY "Users can only view their own clients" ON public.clients FOR SELECT USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
+
+
+--
+-- Name: accounts Users can update own accounts or as accountant; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update own accounts or as accountant" ON public.accounts FOR UPDATE USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
 
 
 --
@@ -1652,10 +1935,28 @@ CREATE POLICY "Users can update own invoices" ON public.invoices FOR UPDATE USIN
 
 
 --
--- Name: profiles Users can update own profile; Type: POLICY; Schema: public; Owner: -
+-- Name: stock_movements Users can update own movements; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING ((auth.uid() = id));
+CREATE POLICY "Users can update own movements" ON public.stock_movements FOR UPDATE USING ((auth.uid() = user_id));
+
+
+--
+-- Name: products Users can update own products; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update own products" ON public.products FOR UPDATE USING ((auth.uid() = user_id));
+
+
+--
+-- Name: profiles Users can update own profile or as accountant; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update own profile or as accountant" ON public.profiles FOR UPDATE USING (((auth.uid() = id) OR (EXISTS ( SELECT 1
+   FROM public.workspace_members
+  WHERE ((workspace_members.workspace_owner_id = profiles.id) AND (workspace_members.member_user_id = auth.uid()) AND (workspace_members.role = 'accountant'::public.app_role)))))) WITH CHECK (((auth.uid() = id) OR (EXISTS ( SELECT 1
+   FROM public.workspace_members
+  WHERE ((workspace_members.workspace_owner_id = profiles.id) AND (workspace_members.member_user_id = auth.uid()) AND (workspace_members.role = 'accountant'::public.app_role))))));
 
 
 --
@@ -1717,12 +2018,26 @@ CREATE POLICY "Users can view own invoices or as accountant" ON public.invoices 
 
 
 --
--- Name: profiles Users can view own profile or as accountant; Type: POLICY; Schema: public; Owner: -
+-- Name: stock_movements Users can view own movements or as accountant; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can view own profile or as accountant" ON public.profiles FOR SELECT TO authenticated USING (((auth.uid() = id) OR (EXISTS ( SELECT 1
+CREATE POLICY "Users can view own movements or as accountant" ON public.stock_movements FOR SELECT USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
+
+
+--
+-- Name: products Users can view own products or as accountant; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own products or as accountant" ON public.products FOR SELECT USING (((auth.uid() = user_id) OR public.has_workspace_access(user_id, auth.uid())));
+
+
+--
+-- Name: profiles Users can view own profile or authorized workspace profiles; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own profile or authorized workspace profiles" ON public.profiles FOR SELECT USING (((auth.uid() = id) OR (EXISTS ( SELECT 1
    FROM public.workspace_members
-  WHERE ((workspace_members.workspace_owner_id = profiles.id) AND (workspace_members.member_user_id = auth.uid()))))));
+  WHERE ((workspace_members.workspace_owner_id = profiles.id) AND (workspace_members.member_user_id = auth.uid()) AND (workspace_members.role = 'accountant'::public.app_role))))));
 
 
 --
@@ -1861,6 +2176,12 @@ ALTER TABLE public.payment_gateway_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: products; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: profiles; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1879,6 +2200,12 @@ ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saft_exports ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: stock_movements; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.stock_movements ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: user_roles; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1895,6 +2222,12 @@ ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.user_subscriptions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: webhook_events; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: workspace_members; Type: ROW SECURITY; Schema: public; Owner: -

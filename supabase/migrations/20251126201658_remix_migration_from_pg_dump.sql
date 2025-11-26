@@ -38,7 +38,8 @@ SET row_security = off;
 
 CREATE TYPE public.app_role AS ENUM (
     'owner',
-    'accountant'
+    'accountant',
+    'admin'
 );
 
 
@@ -150,6 +151,34 @@ $$;
 
 
 --
+-- Name: generate_invitation_code(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.generate_invitation_code() RETURNS text
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  new_code TEXT;
+  code_exists BOOLEAN;
+BEGIN
+  LOOP
+    -- Generate 8-character alphanumeric code
+    new_code := upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 8));
+    
+    -- Check if code exists
+    SELECT EXISTS(SELECT 1 FROM public.invitation_codes WHERE code = new_code) INTO code_exists;
+    
+    -- Exit loop if unique
+    EXIT WHEN NOT code_exists;
+  END LOOP;
+  
+  RETURN new_code;
+END;
+$$;
+
+
+--
 -- Name: get_business_user_by_email(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -161,11 +190,12 @@ BEGIN
   RETURN QUERY
   SELECT 
     p.id AS user_id,
-    p.email AS email,
-    p.company_name
-  FROM public.profiles p
-  INNER JOIN public.user_roles ur ON p.id = ur.user_id
-  WHERE LOWER(p.email) = LOWER(user_email)
+    COALESCE(p.email, u.email) AS email,
+    COALESCE(p.company_name, 'My Company') AS company_name
+  FROM auth.users u
+  LEFT JOIN public.profiles p ON u.id = p.id
+  INNER JOIN public.user_roles ur ON u.id = ur.user_id
+  WHERE LOWER(COALESCE(p.email, u.email)) = LOWER(user_email)
     AND ur.role = 'business';
 END;
 $$;
@@ -285,6 +315,23 @@ CREATE FUNCTION public.is_accountant(_user_id uuid) RETURNS boolean
     FROM public.user_roles
     WHERE user_id = _user_id
       AND role = 'accountant'
+  );
+$$;
+
+
+--
+-- Name: is_admin(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_admin(_user_id uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_roles
+    WHERE user_id = _user_id
+      AND role = 'admin'
   );
 $$;
 
@@ -476,6 +523,22 @@ CREATE TABLE public.expenses (
 
 
 --
+-- Name: invitation_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invitation_codes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    code text NOT NULL,
+    workspace_owner_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    is_used boolean DEFAULT false NOT NULL,
+    used_by uuid,
+    used_at timestamp with time zone
+);
+
+
+--
 -- Name: invoice_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -512,7 +575,44 @@ CREATE TABLE public.invoices (
     notes text,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
+    invoice_type text DEFAULT 'invoice'::text,
+    CONSTRAINT invoices_invoice_type_check CHECK ((invoice_type = ANY (ARRAY['invoice'::text, 'proforma'::text]))),
     CONSTRAINT invoices_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'paid'::text, 'overdue'::text])))
+);
+
+
+--
+-- Name: payment_gateway_config; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_gateway_config (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    gateway_name text DEFAULT 'stripe'::text NOT NULL,
+    api_key_encrypted text,
+    publishable_key text,
+    webhook_secret text,
+    is_active boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: payment_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    stripe_payment_id text,
+    amount numeric(10,2) NOT NULL,
+    currency text DEFAULT 'USD'::text,
+    status text NOT NULL,
+    payment_method text,
+    description text,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -535,7 +635,12 @@ CREATE TABLE public.profiles (
     city text,
     county text,
     country text DEFAULT 'Romania'::text,
-    postal_code text
+    postal_code text,
+    spv_client_id text,
+    spv_client_secret text,
+    spv_last_sync timestamp with time zone,
+    payment_plan text DEFAULT 'free'::text,
+    CONSTRAINT profiles_payment_plan_check CHECK ((payment_plan = ANY (ARRAY['free'::text, 'basic'::text, 'pro'::text, 'enterprise'::text])))
 );
 
 
@@ -578,7 +683,7 @@ CREATE TABLE public.user_roles (
     user_id uuid NOT NULL,
     role text NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT user_roles_role_check CHECK ((role = ANY (ARRAY['business'::text, 'accountant'::text])))
+    CONSTRAINT user_roles_role_check CHECK ((role = ANY (ARRAY['business'::text, 'accountant'::text, 'owner'::text, 'admin'::text])))
 );
 
 
@@ -593,6 +698,25 @@ CREATE TABLE public.user_sessions (
     user_agent text,
     last_activity timestamp with time zone DEFAULT now(),
     created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: user_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    stripe_subscription_id text,
+    stripe_customer_id text,
+    plan_name text NOT NULL,
+    status text NOT NULL,
+    current_period_start timestamp with time zone,
+    current_period_end timestamp with time zone,
+    cancel_at_period_end boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -683,6 +807,22 @@ ALTER TABLE ONLY public.expenses
 
 
 --
+-- Name: invitation_codes invitation_codes_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitation_codes
+    ADD CONSTRAINT invitation_codes_code_key UNIQUE (code);
+
+
+--
+-- Name: invitation_codes invitation_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitation_codes
+    ADD CONSTRAINT invitation_codes_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: invoice_items invoice_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -704,6 +844,22 @@ ALTER TABLE ONLY public.invoices
 
 ALTER TABLE ONLY public.invoices
     ADD CONSTRAINT invoices_user_id_invoice_number_key UNIQUE (user_id, invoice_number);
+
+
+--
+-- Name: payment_gateway_config payment_gateway_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_gateway_config
+    ADD CONSTRAINT payment_gateway_config_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payment_transactions payment_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_transactions
+    ADD CONSTRAINT payment_transactions_pkey PRIMARY KEY (id);
 
 
 --
@@ -760,6 +916,14 @@ ALTER TABLE ONLY public.user_roles
 
 ALTER TABLE ONLY public.user_sessions
     ADD CONSTRAINT user_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_subscriptions user_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_subscriptions
+    ADD CONSTRAINT user_subscriptions_pkey PRIMARY KEY (id);
 
 
 --
@@ -828,6 +992,34 @@ CREATE INDEX idx_expenses_user_id ON public.expenses USING btree (user_id);
 
 
 --
+-- Name: idx_invitation_codes_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_invitation_codes_code ON public.invitation_codes USING btree (code);
+
+
+--
+-- Name: idx_invitation_codes_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_invitation_codes_expires_at ON public.invitation_codes USING btree (expires_at);
+
+
+--
+-- Name: idx_payment_transactions_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_payment_transactions_status ON public.payment_transactions USING btree (status);
+
+
+--
+-- Name: idx_payment_transactions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_payment_transactions_user_id ON public.payment_transactions USING btree (user_id);
+
+
+--
 -- Name: idx_rate_limits_user_action; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -846,6 +1038,20 @@ CREATE INDEX idx_user_sessions_last_activity ON public.user_sessions USING btree
 --
 
 CREATE INDEX idx_user_sessions_user_id ON public.user_sessions USING btree (user_id);
+
+
+--
+-- Name: idx_user_subscriptions_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_subscriptions_status ON public.user_subscriptions USING btree (status);
+
+
+--
+-- Name: idx_user_subscriptions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_subscriptions_user_id ON public.user_subscriptions USING btree (user_id);
 
 
 --
@@ -1014,10 +1220,94 @@ CREATE POLICY "Accountants can create access requests" ON public.access_requests
 
 
 --
+-- Name: invitation_codes Accountants can mark codes as used; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Accountants can mark codes as used" ON public.invitation_codes FOR UPDATE TO authenticated USING (((NOT is_used) AND (expires_at > now()))) WITH CHECK (((is_used = true) AND (used_by = auth.uid())));
+
+
+--
 -- Name: access_requests Accountants can view own requests; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Accountants can view own requests" ON public.access_requests FOR SELECT TO authenticated USING ((auth.uid() = accountant_user_id));
+
+
+--
+-- Name: user_roles Admins can manage user roles; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can manage user roles" ON public.user_roles TO authenticated USING (public.is_admin(auth.uid())) WITH CHECK (public.is_admin(auth.uid()));
+
+
+--
+-- Name: access_requests Admins can view all access requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all access requests" ON public.access_requests FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: clients Admins can view all clients; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all clients" ON public.clients FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: expenses Admins can view all expenses; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all expenses" ON public.expenses FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: invoices Admins can view all invoices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all invoices" ON public.invoices FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: profiles Admins can view all profiles; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: user_subscriptions Admins can view all subscriptions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all subscriptions" ON public.user_subscriptions FOR SELECT USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: payment_transactions Admins can view all transactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all transactions" ON public.payment_transactions FOR SELECT USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: user_roles Admins can view all user roles; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all user roles" ON public.user_roles FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: workspace_members Admins can view all workspace members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all workspace members" ON public.workspace_members FOR SELECT TO authenticated USING (public.is_admin(auth.uid()));
+
+
+--
+-- Name: invitation_codes Anyone can view valid codes for joining; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Anyone can view valid codes for joining" ON public.invitation_codes FOR SELECT TO authenticated USING (((NOT is_used) AND (expires_at > now())));
 
 
 --
@@ -1055,6 +1345,111 @@ CREATE POLICY "Business owners can view requests to them" ON public.access_reque
 
 
 --
+-- Name: access_requests Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.access_requests AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: accounts Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.accounts AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: audit_logs Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.audit_logs AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: bank_statements Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.bank_statements AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: clients Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.clients AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: expenses Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.expenses AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: invitation_codes Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.invitation_codes TO anon USING (false);
+
+
+--
+-- Name: invoice_items Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.invoice_items AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: invoices Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.invoices AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: profiles Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.profiles AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: saft_exports Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.saft_exports AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: user_roles Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.user_roles AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: user_sessions Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.user_sessions AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: workspace_members Deny anonymous access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Deny anonymous access" ON public.workspace_members AS RESTRICTIVE TO anon USING (false);
+
+
+--
+-- Name: payment_gateway_config Only admins can manage payment config; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Only admins can manage payment config" ON public.payment_gateway_config USING (public.is_admin(auth.uid()));
+
+
+--
 -- Name: workspace_members Only owners can invite members; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1066,6 +1461,20 @@ CREATE POLICY "Only owners can invite members" ON public.workspace_members FOR I
 --
 
 CREATE POLICY "Only owners can remove members" ON public.workspace_members FOR DELETE USING ((workspace_owner_id = auth.uid()));
+
+
+--
+-- Name: invitation_codes Owners can create codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Owners can create codes" ON public.invitation_codes FOR INSERT TO authenticated WITH CHECK ((workspace_owner_id = auth.uid()));
+
+
+--
+-- Name: invitation_codes Owners can view their own codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Owners can view their own codes" ON public.invitation_codes FOR SELECT TO authenticated USING ((workspace_owner_id = auth.uid()));
 
 
 --
@@ -1324,6 +1733,20 @@ CREATE POLICY "Users can view own role" ON public.user_roles FOR SELECT TO authe
 
 
 --
+-- Name: user_subscriptions Users can view own subscriptions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own subscriptions" ON public.user_subscriptions FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
+-- Name: payment_transactions Users can view own transactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own transactions" ON public.payment_transactions FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
 -- Name: audit_logs Users can view their own audit logs; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1408,6 +1831,12 @@ ALTER TABLE public.currency_rates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: invitation_codes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.invitation_codes ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: invoice_items; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1418,6 +1847,18 @@ ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: payment_gateway_config; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_gateway_config ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: payment_transactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: profiles; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1448,6 +1889,12 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_subscriptions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_subscriptions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: workspace_members; Type: ROW SECURITY; Schema: public; Owner: -

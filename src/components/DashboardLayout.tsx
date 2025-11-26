@@ -4,6 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   LayoutDashboard, 
   Users, 
@@ -16,9 +24,16 @@ import {
   BookOpen,
   Receipt,
   ArrowLeft,
-  Building2
+  Building2,
+  ChevronDown,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
+
+interface WorkspaceOption {
+  id: string;
+  name: string;
+}
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -33,6 +48,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [viewingCompany, setViewingCompany] = useState<string | null>(null);
+  const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceOption[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -77,20 +94,68 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
     // Check if viewing another company's workspace
     const activeWorkspaceOwner = sessionStorage.getItem("active_workspace_owner");
-    if (activeWorkspaceOwner && roleData?.role === "accountant") {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("company_name")
-        .eq("id", activeWorkspaceOwner)
-        .single();
+    setActiveWorkspaceId(activeWorkspaceOwner);
+    
+    if (roleData?.role === "accountant") {
+      // Load all available workspaces for accountant
+      await loadAccountantWorkspaces(userId);
       
-      setViewingCompany(profile?.company_name || null);
+      if (activeWorkspaceOwner) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("company_name")
+          .eq("id", activeWorkspaceOwner)
+          .single();
+        
+        setViewingCompany(profile?.company_name || null);
+      }
     }
+  };
+
+  const loadAccountantWorkspaces = async (userId: string) => {
+    const { data: memberships } = await supabase
+      .from("workspace_members")
+      .select("workspace_owner_id")
+      .eq("member_user_id", userId);
+
+    if (!memberships) return;
+
+    const workspaces = await Promise.all(
+      memberships.map(async (membership) => {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, company_name")
+          .eq("id", membership.workspace_owner_id)
+          .single();
+
+        return profile ? { id: profile.id, name: profile.company_name } : null;
+      })
+    );
+
+    setAvailableWorkspaces(workspaces.filter((w): w is WorkspaceOption => w !== null));
+  };
+
+  const handleSwitchWorkspace = async (workspaceId: string) => {
+    sessionStorage.setItem("active_workspace_owner", workspaceId);
+    setActiveWorkspaceId(workspaceId);
+    
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_name")
+      .eq("id", workspaceId)
+      .single();
+    
+    setViewingCompany(profile?.company_name || null);
+    toast.success(`Acum vizualizezi: ${profile?.company_name}`);
+    
+    // Reload current page to refresh data
+    window.location.reload();
   };
 
   const handleBackToAccountantDashboard = () => {
     sessionStorage.removeItem("active_workspace_owner");
     setViewingCompany(null);
+    setActiveWorkspaceId(null);
     navigate("/accountant-dashboard");
   };
 
@@ -149,12 +214,53 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
             <p className="text-sm text-muted-foreground ml-[52px]">{user?.email}</p>
             
-            {userRole === "accountant" && viewingCompany && (
+            {userRole === "accountant" && availableWorkspaces.length > 0 && (
               <div className="mt-3 ml-[52px]">
-                <Badge variant="secondary" className="gap-1">
-                  <Building2 className="h-3 w-3" />
-                  {viewingCompany}
-                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-3 w-3" />
+                        <span className="truncate">
+                          {viewingCompany || "Selectează compania"}
+                        </span>
+                      </div>
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent 
+                    align="start" 
+                    className="w-[240px] bg-popover z-50"
+                  >
+                    <DropdownMenuLabel>Companiile mele</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {availableWorkspaces.map((workspace) => (
+                      <DropdownMenuItem
+                        key={workspace.id}
+                        onClick={() => handleSwitchWorkspace(workspace.id)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            <span className="truncate">{workspace.name}</span>
+                          </div>
+                          {activeWorkspaceId === workspace.id && (
+                            <Check className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleBackToAccountantDashboard}
+                      className="cursor-pointer"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Vezi toate companiile
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
@@ -167,7 +273,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               size="sm"
             >
               <ArrowLeft className="h-4 w-4" />
-              Înapoi la companiile mele
+              Toate companiile
             </Button>
           )}
 

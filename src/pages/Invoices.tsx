@@ -13,6 +13,7 @@ import { InvoiceImageUpload } from "@/components/InvoiceImageUpload";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { InvoiceApprovalDialog } from "@/components/InvoiceApprovalDialog";
 import { InvoiceStatusWorkflow } from "@/components/InvoiceStatusWorkflow";
+import { SpvConfirmationDialog } from "@/components/SpvConfirmationDialog";
 import { 
   validateProfileForEFactura, 
   validateClientForEFactura,
@@ -36,6 +37,7 @@ interface Invoice {
   approved_by?: string;
   approved_at?: string;
   approval_notes?: string;
+  spv_sent_at?: string | null;
   clients: {
     name: string;
   };
@@ -60,6 +62,8 @@ const Invoices = () => {
     id: string;
     number: string;
   } | null>(null);
+  const [spvConfirmDialogOpen, setSpvConfirmDialogOpen] = useState(false);
+  const [selectedInvoiceForSpv, setSelectedInvoiceForSpv] = useState<{ id: string; invoice_number: string } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -451,12 +455,20 @@ const Invoices = () => {
     }
   };
 
-  const handleSendToSPV = async (invoiceId: string) => {
-    setSendingToSpv((prev) => ({ ...prev, [invoiceId]: true }));
+  const handleSendToSPV = async (invoiceId: string, invoiceNumber: string) => {
+    // Show confirmation dialog first
+    setSelectedInvoiceForSpv({ id: invoiceId, invoice_number: invoiceNumber });
+    setSpvConfirmDialogOpen(true);
+  };
+
+  const confirmSendToSPV = async () => {
+    if (!selectedInvoiceForSpv) return;
+    
+    setSendingToSpv((prev) => ({ ...prev, [selectedInvoiceForSpv.id]: true }));
     
     try {
       const response = await supabase.functions.invoke("send-to-spv", {
-        body: { invoiceId },
+        body: { invoiceId: selectedInvoiceForSpv.id },
       });
 
       if (response.error) {
@@ -464,8 +476,16 @@ const Invoices = () => {
       }
 
       if (response.data?.success) {
+        // Update the invoice with SPV sent timestamp
+        await supabase
+          .from('invoices')
+          .update({
+            spv_sent_at: new Date().toISOString(),
+            spv_status: 'sent'
+          })
+          .eq('id', selectedInvoiceForSpv.id);
+
         toast.success("Factură trimisă în SPV cu succes!");
-        // Reload invoices to update status
         loadData();
       } else {
         throw new Error(response.data?.error || "Eroare necunoscută");
@@ -474,7 +494,8 @@ const Invoices = () => {
       console.error("Error sending to SPV:", error);
       toast.error(error.message || "Eroare la trimitere în SPV");
     } finally {
-      setSendingToSpv((prev) => ({ ...prev, [invoiceId]: false }));
+      setSendingToSpv((prev) => ({ ...prev, [selectedInvoiceForSpv.id]: false }));
+      setSelectedInvoiceForSpv(null);
     }
   };
 
@@ -650,6 +671,7 @@ const Invoices = () => {
                       status={invoice.status}
                       accountantApproved={invoice.accountant_approved}
                       approvalNotes={invoice.approval_notes}
+                      spvSentAt={invoice.spv_sent_at}
                     />
                   </div>
 
@@ -744,7 +766,7 @@ const Invoices = () => {
                          <Button
                            size="sm"
                            variant="default"
-                           onClick={() => handleSendToSPV(invoice.id)}
+                           onClick={() => handleSendToSPV(invoice.id, invoice.invoice_number)}
                            disabled={sendingToSpv[invoice.id]}
                            title="Trimite în SPV"
                            className="bg-green-600 hover:bg-green-700"
@@ -779,6 +801,12 @@ const Invoices = () => {
           onReject={handleRejectInvoice}
           invoiceNumber={selectedInvoiceForApproval?.number || ""}
           isLoading={selectedInvoiceForApproval ? approvingInvoice[selectedInvoiceForApproval.id] || false : false}
+        />
+        <SpvConfirmationDialog
+          open={spvConfirmDialogOpen}
+          onOpenChange={setSpvConfirmDialogOpen}
+          onConfirm={confirmSendToSPV}
+          invoiceNumber={selectedInvoiceForSpv?.invoice_number || ""}
         />
       </div>
     </DashboardLayout>

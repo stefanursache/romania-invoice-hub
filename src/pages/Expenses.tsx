@@ -117,10 +117,21 @@ const Expenses = () => {
                   <Plus className="mr-2 h-4 w-4" />
                   Scanează chitanță
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <ReceiptUpload />
-              </DialogContent>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <div>
+                      <div className="mb-6">
+                        <h2 className="text-2xl font-bold">Scanează chitanță/bon fiscal</h2>
+                        <p className="text-muted-foreground mt-1">
+                          Încarcă o imagine cu o chitanță pentru a extrage automat datele și categoriza cheltuiala
+                        </p>
+                      </div>
+                      <ReceiptUpload onSuccess={() => {
+                        setShowUploadDialog(false);
+                        loadExpenses();
+                      }} />
+                    </div>
+                  </DialogContent>
             </Dialog>
           </div>
         </div>
@@ -178,7 +189,18 @@ const Expenses = () => {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <ReceiptUpload />
+                  <div>
+                    <div className="mb-6">
+                      <h2 className="text-2xl font-bold">Scanează chitanță/bon fiscal</h2>
+                      <p className="text-muted-foreground mt-1">
+                        Încarcă o imagine cu o chitanță pentru a extrage automat datele și categoriza cheltuiala
+                      </p>
+                    </div>
+                    <ReceiptUpload onSuccess={() => {
+                      setShowUploadDialog(false);
+                      loadExpenses();
+                    }} />
+                  </div>
                 </DialogContent>
               </Dialog>
             </CardContent>

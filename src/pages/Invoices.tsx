@@ -12,6 +12,7 @@ import { exportToCSV } from "@/utils/exportUtils";
 import { InvoiceImageUpload } from "@/components/InvoiceImageUpload";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { InvoiceApprovalDialog } from "@/components/InvoiceApprovalDialog";
+import { InvoiceStatusWorkflow } from "@/components/InvoiceStatusWorkflow";
 import { 
   validateProfileForEFactura, 
   validateClientForEFactura,
@@ -593,6 +594,15 @@ const Invoices = () => {
                 </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Status Workflow */}
+                  <div className="mb-6">
+                    <InvoiceStatusWorkflow
+                      status={invoice.status}
+                      accountantApproved={invoice.accountant_approved}
+                      approvalNotes={invoice.approval_notes}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Client</p>

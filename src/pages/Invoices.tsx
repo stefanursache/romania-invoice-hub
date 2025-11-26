@@ -47,7 +47,7 @@ const Invoices = () => {
   const [downloadingPdf, setDownloadingPdf] = useState<Record<string, boolean>>({});
   const [downloadingXml, setDownloadingXml] = useState<Record<string, boolean>>({});
   const [sendingToSpv, setSendingToSpv] = useState<Record<string, boolean>>({});
-  const [userRole, setUserRole] = useState<string>("owner");
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [workspaceOwnerId, setWorkspaceOwnerId] = useState<string | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<any>(null);
@@ -62,12 +62,17 @@ const Invoices = () => {
   } | null>(null);
 
   useEffect(() => {
-    checkAuth();
+    loadData();
   }, []);
 
-  const checkAuth = async () => {
+  const loadData = async () => {
+    setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     console.log("🔐 Current user ID:", user.id);
 
@@ -86,26 +91,14 @@ const Invoices = () => {
     setUserRole(detectedRole);
     
     // Store workspace owner ID if accountant
+    let ownerIdToUse = null;
     if (detectedRole === "accountant" && memberData?.workspace_owner_id) {
-      setWorkspaceOwnerId(memberData.workspace_owner_id);
-      console.log("🏢 Workspace owner ID:", memberData.workspace_owner_id);
+      ownerIdToUse = memberData.workspace_owner_id;
+      setWorkspaceOwnerId(ownerIdToUse);
+      console.log("🏢 Workspace owner ID:", ownerIdToUse);
     }
-    
-    loadInvoices();
-  };
 
-  const loadInvoices = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Check if user is an accountant with workspace access
-    const { data: workspaces } = await supabase
-      .from("workspace_members")
-      .select("workspace_owner_id")
-      .eq("member_user_id", user.id);
-
-    // Build query to get user's own invoices + invoices from workspaces they have access to
+    // Build query to get invoices
     let query = supabase
       .from("invoices")
       .select(`
@@ -121,12 +114,13 @@ const Invoices = () => {
       `)
       .order("created_at", { ascending: false });
 
-    // If accountant, get invoices from all accessible workspaces
-    if (workspaces && workspaces.length > 0) {
-      const workspaceOwnerIds = workspaces.map(w => w.workspace_owner_id);
-      query = query.in("user_id", [user.id, ...workspaceOwnerIds]);
+    // If accountant, get invoices from workspace owner
+    if (detectedRole === "accountant" && ownerIdToUse) {
+      console.log("📊 Loading invoices for workspace owner:", ownerIdToUse);
+      query = query.eq("user_id", ownerIdToUse);
     } else {
-      // Otherwise, just get user's own invoices
+      // Otherwise, get user's own invoices
+      console.log("📊 Loading invoices for user:", user.id);
       query = query.eq("user_id", user.id);
     }
 
@@ -398,7 +392,7 @@ const Invoices = () => {
       toast.success("Factură aprobată cu succes!");
       setApprovalDialogOpen(false);
       setSelectedInvoiceForApproval(null);
-      loadInvoices();
+    loadData();
     } catch (error: any) {
       console.error("Error approving invoice:", error);
       toast.error(error.message || "Eroare la aprobarea facturii");
@@ -432,7 +426,7 @@ const Invoices = () => {
       toast.success("Factură respinsă. Proprietarul va fi notificat.");
       setApprovalDialogOpen(false);
       setSelectedInvoiceForApproval(null);
-      loadInvoices();
+      loadData();
     } catch (error: any) {
       console.error("Error rejecting invoice:", error);
       toast.error(error.message || "Eroare la respingerea facturii");
@@ -456,7 +450,7 @@ const Invoices = () => {
       if (response.data?.success) {
         toast.success("Factură trimisă în SPV cu succes!");
         // Reload invoices to update status
-        loadInvoices();
+        loadData();
       } else {
         throw new Error(response.data?.error || "Eroare necunoscută");
       }

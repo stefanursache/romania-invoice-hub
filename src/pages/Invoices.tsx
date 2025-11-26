@@ -4,11 +4,13 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { exportToCSV } from "@/utils/exportUtils";
+import { InvoiceImageUpload } from "@/components/InvoiceImageUpload";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface Invoice {
   id: string;
@@ -31,6 +33,7 @@ const Invoices = () => {
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("owner");
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -262,12 +265,25 @@ const Invoices = () => {
               Export CSV
             </Button>
             {userRole === "owner" && (
-              <Link to="/invoices/new">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Factură nouă
-                </Button>
-              </Link>
+              <>
+                <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <ImagePlus className="mr-2 h-4 w-4" />
+                      Import din imagine
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <InvoiceImageUpload />
+                  </DialogContent>
+                </Dialog>
+                <Link to="/invoices/new">
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Factură nouă
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
         </div>

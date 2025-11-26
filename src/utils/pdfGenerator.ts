@@ -113,6 +113,10 @@ export const generateInvoicePDF = (
   if (company.address && yPos < boxY + boxHeight - 3) {
     const addressLines = doc.splitTextToSize(company.address, 75);
     doc.text(addressLines, 20, yPos);
+  } else if (!company.address && yPos < boxY + boxHeight - 3) {
+    doc.setTextColor(...textMedium);
+    doc.text("(Adresa nu este completată)", 20, yPos);
+    doc.setTextColor(...textDark);
   }
 
   // Client box
@@ -127,7 +131,7 @@ export const generateInvoicePDF = (
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...textDark);
-  doc.text(invoice.client.name, 115, boxY + 16);
+  doc.text(invoice.client.name || "N/A", 115, boxY + 16);
   
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -144,6 +148,10 @@ export const generateInvoicePDF = (
   if (invoice.client.address && yPos < boxY + boxHeight - 3) {
     const clientAddressLines = doc.splitTextToSize(invoice.client.address, 75);
     doc.text(clientAddressLines, 115, yPos);
+  } else if (!invoice.client.address && yPos < boxY + boxHeight - 3) {
+    doc.setTextColor(...textMedium);
+    doc.text("(Adresa nu este completată)", 115, yPos);
+    doc.setTextColor(...textDark);
   }
 
   // Invoice metadata row

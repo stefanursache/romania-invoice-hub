@@ -181,28 +181,10 @@ const Expenses = () => {
             <CardContent className="py-12 text-center">
               <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground mb-4">Nu ai cheltuieli înregistrate încă</p>
-              <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Scanează prima chitanță
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <div>
-                    <div className="mb-6">
-                      <h2 className="text-2xl font-bold">Scanează chitanță/bon fiscal</h2>
-                      <p className="text-muted-foreground mt-1">
-                        Încarcă o imagine cu o chitanță pentru a extrage automat datele și categoriza cheltuiala
-                      </p>
-                    </div>
-                    <ReceiptUpload onSuccess={() => {
-                      setShowUploadDialog(false);
-                      loadExpenses();
-                    }} />
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button onClick={() => setShowUploadDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Scanează prima chitanță
+              </Button>
             </CardContent>
           </Card>
         ) : (

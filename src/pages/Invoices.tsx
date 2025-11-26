@@ -75,7 +75,11 @@ const Invoices = () => {
       .eq("member_user_id", user.id)
       .maybeSingle();
 
-    setUserRole(memberData?.role || "owner");
+    console.log("🔍 User role check:", memberData);
+    const detectedRole = memberData?.role || "owner";
+    console.log("👤 Detected user role:", detectedRole);
+    
+    setUserRole(detectedRole);
     loadInvoices();
   };
 
@@ -115,6 +119,8 @@ const Invoices = () => {
       toast.error("Eroare la încărcarea facturilor");
       console.error(error);
     } else {
+      console.log("📋 Loaded invoices:", data);
+      console.log("📊 Total invoices:", data?.length);
       setInvoices(data || []);
     }
     setLoading(false);
@@ -677,22 +683,31 @@ const Invoices = () => {
                         ) : (
                           <FileCode className="h-4 w-4" />
                         )}
-                      </Button>
-                      {userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent" && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => openApprovalDialog(invoice.id, invoice.invoice_number)}
-                          disabled={approvingInvoice[invoice.id]}
-                          title="Revizie factură"
-                        >
-                          {approvingInvoice[invoice.id] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
+                       </Button>
+                       {(() => {
+                         const showApproveBtn = userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent";
+                         console.log(`✅ Invoice ${invoice.invoice_number}:`, {
+                           userRole,
+                           accountant_approved: invoice.accountant_approved,
+                           status: invoice.status,
+                           showApproveBtn
+                         });
+                         return showApproveBtn;
+                       })() && (
+                         <Button
+                           size="sm"
+                           variant="default"
+                           onClick={() => openApprovalDialog(invoice.id, invoice.invoice_number)}
+                           disabled={approvingInvoice[invoice.id]}
+                           title="Revizie factură"
+                         >
+                           {approvingInvoice[invoice.id] ? (
+                             <Loader2 className="h-4 w-4 animate-spin" />
+                           ) : (
+                             <CheckCircle className="h-4 w-4" />
+                           )}
+                         </Button>
+                       )}
                       {userRole === "owner" && invoice.status !== "sent" && (
                         <Button
                           size="sm"

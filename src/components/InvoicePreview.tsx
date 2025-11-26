@@ -21,6 +21,7 @@ interface InvoicePreviewProps {
     total: number;
     notes?: string;
     accountant_approved?: boolean;
+    approval_notes?: string;
     clients: {
       name: string;
       cui_cif?: string;
@@ -223,6 +224,30 @@ export const InvoicePreview = ({ open, onOpenChange, invoice, items, company }: 
             <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground mb-1">Cont bancar (IBAN)</p>
               <p className="font-mono font-semibold">{company.bank_account}</p>
+            </div>
+          )}
+
+          {/* Approval Notes */}
+          {invoice.approval_notes && (
+            <div className={`p-4 rounded-lg border ${
+              invoice.accountant_approved
+                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+            }`}>
+              <p className={`text-sm font-semibold mb-2 ${
+                invoice.accountant_approved
+                  ? "text-green-900 dark:text-green-200"
+                  : "text-red-900 dark:text-red-200"
+              }`}>
+                {invoice.accountant_approved ? "Comentarii aprobare contabil" : "Motiv respingere"}
+              </p>
+              <p className={`text-sm ${
+                invoice.accountant_approved
+                  ? "text-green-800 dark:text-green-300"
+                  : "text-red-800 dark:text-red-300"
+              }`}>
+                {invoice.approval_notes}
+              </p>
             </div>
           )}
 

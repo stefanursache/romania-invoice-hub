@@ -283,6 +283,24 @@
     "saftGenerated": "XML SAF-T generat cu succes",
     "selectValidPeriod": "Te rugăm să selectezi o perioadă validă"
   },
+  "notifications": {
+    "clientAlerts": "Alerte Clienți",
+    "clientAlertsDesc": "Probleme care necesită atenția ta pentru toate companiile client",
+    "urgent": "Urgent",
+    "warning": "Avertisment",
+    "info": "Info",
+    "high": "Prioritate Mare",
+    "medium": "Prioritate Medie",
+    "low": "Informație",
+    "allGood": "Totul este în ordine!",
+    "noAlerts": "Nu există alerte în acest moment. Toți clienții tăi sunt la zi.",
+    "draftInvoices": "{{count}} factură/i ciornă necesită finalizare",
+    "overdueInvoices": "{{count}} factură/i restantă necesită atenție imediată",
+    "missingCompanyInfo": "Lipsesc informații despre companie (CUI/CIF, Nr. Reg. Com. sau Adresă)",
+    "noRecentActivity": "Nu au fost create facturi în ultimele 30 de zile",
+    "view": "Vezi",
+    "errorLoading": "Eroare la încărcarea notificărilor"
+  },
   "breadcrumb": {
     "myCompanies": "Companiile mele",
     "switchCompany": "Schimbă compania"

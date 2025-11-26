@@ -5,6 +5,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { NotificationBadge } from "@/components/NotificationBadge";
 import { useTranslation } from "react-i18next";
 import {
   Breadcrumb,
@@ -343,6 +344,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <LogOut className="h-5 w-5" />
               {t('nav.signOut')}
             </Button>
+            {userRole === "accountant" && <NotificationBadge />}
             <LanguageToggle />
           </div>
         </div>

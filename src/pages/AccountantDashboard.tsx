@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { AccountantNotifications } from "@/components/AccountantNotifications";
+import { useTranslation } from "react-i18next";
 import { 
   Building2, 
   FileText, 
@@ -40,6 +42,7 @@ interface WorkspaceAccess {
 
 const AccountantDashboard = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState<WorkspaceAccess[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -298,6 +301,9 @@ const AccountantDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Notifications/Alerts Section */}
+            <AccountantNotifications />
 
             {/* Search and Filter */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">

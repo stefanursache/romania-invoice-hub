@@ -301,6 +301,44 @@
     "view": "View",
     "errorLoading": "Error loading notifications"
   },
+  "saftStatus": {
+    "title": "SAF-T Status",
+    "lastGenerated": "Last generated",
+    "nextGeneration": "Next generation",
+    "scheduled": "Scheduled on the 1st of each month at 2 AM",
+    "noExports": "No SAF-T exports yet",
+    "failed": "Generation failed"
+  },
+  "accessRequest": {
+    "title": "Request Access to Business",
+    "description": "Enter the email address of a business owner to request access to their data.",
+    "sendRequest": "Send Request",
+    "requesting": "Sending...",
+    "success": "Access Requested",
+    "successDesc": "Your request has been sent. You'll be notified when the business owner responds.",
+    "userNotFound": "Business Not Found",
+    "userNotFoundDesc": "No business account exists with this email.",
+    "alreadyRequested": "Already Requested",
+    "alreadyRequestedDesc": "You already have a pending request to this business.",
+    "alreadyApproved": "Already Approved",
+    "alreadyApprovedDesc": "You already have access to this business.",
+    "previouslyRejected": "Previously Rejected",
+    "previouslyRejectedDesc": "Your previous request was rejected. Contact the business owner directly.",
+    "myRequests": "My Access Requests",
+    "myRequestsDesc": "Track the status of your access requests.",
+    "requestedOn": "Requested on",
+    "statusPending": "Pending",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "incomingRequests": "Pending Access Requests",
+    "incomingRequestsDesc": "Accountants requesting access to your business data.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approved": "Request Approved",
+    "approvedDesc": "The accountant now has access to your data.",
+    "rejected": "Request Rejected",
+    "rejectedDesc": "The access request has been rejected."
+  },
   "breadcrumb": {
     "myCompanies": "My Companies",
     "switchCompany": "Switch Company"
@@ -334,6 +372,8 @@
     "company": "Company",
     "companies": "companies",
     "viewing": "Now viewing",
-    "page": "Page"
+    "page": "Page",
+    "error": "Error",
+    "unknown": "Unknown"
   }
 }

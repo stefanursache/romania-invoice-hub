@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          accountant_user_id: string
+          business_owner_email: string
+          business_owner_id: string | null
+          created_at: string | null
+          id: string
+          requested_at: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          accountant_user_id: string
+          business_owner_email: string
+          business_owner_id?: string | null
+          created_at?: string | null
+          id?: string
+          requested_at?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          accountant_user_id?: string
+          business_owner_email?: string
+          business_owner_id?: string | null
+          created_at?: string | null
+          id?: string
+          requested_at?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       accounts: {
         Row: {
           account_code: string

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Building2, KeyRound, User, Cloud } from "lucide-react";
+import { Loader2, Building2, KeyRound, User, Cloud, CreditCard } from "lucide-react";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 
@@ -46,6 +46,8 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [profile, setProfile] = useState<Profile>({
     company_name: "",
     cui_cif: "",
@@ -68,7 +70,38 @@ const Settings = () => {
 
   useEffect(() => {
     loadProfile();
+    loadPaymentData();
   }, []);
+
+  const loadPaymentData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Load subscription
+    const { data: subData } = await supabase
+      .from("user_subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (subData) {
+      setSubscription(subData);
+    }
+
+    // Load transactions
+    const { data: transData } = await supabase
+      .from("payment_transactions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (transData) {
+      setTransactions(transData);
+    }
+  };
 
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -231,7 +264,7 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue={userRole === "accountant" ? "account" : "company"} className="w-full">
-          <TabsList className={`grid w-full ${userRole === "accountant" ? "grid-cols-2" : "grid-cols-4"}`}>
+          <TabsList className={`grid w-full ${userRole === "accountant" ? "grid-cols-2" : "grid-cols-5"}`}>
             {userRole !== "accountant" && (
               <TabsTrigger value="company" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
@@ -242,6 +275,12 @@ const Settings = () => {
               <TabsTrigger value="spv" className="flex items-center gap-2">
                 <Cloud className="h-4 w-4" />
                 SPV / e-Factura
+              </TabsTrigger>
+            )}
+            {userRole !== "accountant" && (
+              <TabsTrigger value="payment" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Abonament
               </TabsTrigger>
             )}
             <TabsTrigger value="account" className="flex items-center gap-2">
@@ -443,6 +482,112 @@ const Settings = () => {
                       Salvează configurarea SPV
                     </Button>
                   </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {userRole !== "accountant" && (
+            <TabsContent value="payment" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Plan de abonament curent</CardTitle>
+                  <CardDescription>Gestionează planul tău de plată și metoda de plată</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {subscription ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold capitalize">{subscription.plan_name}</h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            subscription.status === 'active' 
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : subscription.status === 'canceled'
+                              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                              : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                          }`}>
+                            {subscription.status === 'active' ? 'Activ' : subscription.status === 'canceled' ? 'Anulat' : subscription.status}
+                          </span>
+                        </div>
+                        {subscription.current_period_end && (
+                          <p className="text-sm text-muted-foreground">
+                            {subscription.cancel_at_period_end 
+                              ? `Se anulează la: ${new Date(subscription.current_period_end).toLocaleDateString('ro-RO')}`
+                              : `Se reînnoiește la: ${new Date(subscription.current_period_end).toLocaleDateString('ro-RO')}`
+                            }
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Metodă de plată</h4>
+                        <div className="p-3 border rounded-lg flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-sm">•••• •••• •••• ••••</span>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            Actualizează cardul
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Pentru a actualiza cardul, contactează suportul sau accesează portal-ul de plăți.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-muted-foreground mb-4">Nu ai încă un abonament activ</p>
+                      <Button>Alege un plan</Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Istoric facturi</CardTitle>
+                  <CardDescription>Vizualizează facturile tale de abonament</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {transactions.length > 0 ? (
+                    <div className="space-y-3">
+                      {transactions.map((transaction) => (
+                        <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <div>
+                            <p className="font-medium">{transaction.description || 'Plată abonament'}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(transaction.created_at).toLocaleDateString('ro-RO', { 
+                                day: '2-digit',
+                                month: 'long', 
+                                year: 'numeric' 
+                              })}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">
+                              {transaction.amount} {transaction.currency?.toUpperCase() || 'RON'}
+                            </p>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              transaction.status === 'succeeded' 
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                : transaction.status === 'failed'
+                                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                            }`}>
+                              {transaction.status === 'succeeded' ? 'Plătit' : transaction.status === 'failed' ? 'Eșuat' : transaction.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Nu există facturi disponibile</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

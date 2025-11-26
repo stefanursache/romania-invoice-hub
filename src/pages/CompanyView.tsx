@@ -415,22 +415,6 @@ const CompanyView = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header with Breadcrumb */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => navigate("/accountant-dashboard")}
-              className="hover:text-foreground"
-            >
-              My Companies
-            </Button>
-            <span>/</span>
-            <span className="text-foreground font-medium">{profile.company_name}</span>
-          </div>
-        </div>
-
         {/* Company Title */}
         <div className="space-y-1">
           <h1 className="text-3xl font-bold flex items-center gap-3">

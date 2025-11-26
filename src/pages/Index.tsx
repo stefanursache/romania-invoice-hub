@@ -1,115 +1,268 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle, FileText, TrendingUp, Users } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  ArrowRight, 
+  CheckCircle, 
+  FileText, 
+  TrendingUp, 
+  Users, 
+  Zap, 
+  Shield, 
+  Clock,
+  Download,
+  BarChart3,
+  Sparkles
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10">
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-20 pb-16 md:pt-32 md:pb-24">
-        <div className="text-center max-w-4xl mx-auto space-y-8">
-          <div className="inline-block">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-              <CheckCircle className="h-4 w-4" />
-              Soluție pentru PFA și micro-SRL
-            </span>
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-xl">SmartInvoice</span>
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Facturare inteligentă
-            </span>
-            <br />
-            pentru afaceri românești
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Automatizează facturarea, generează eFactura pentru ANAF, și controlează cash-flow-ul 
-            afacerii tale într-o singură platformă.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex items-center gap-4">
             <Link to="/auth">
-              <Button size="lg" className="text-lg px-8">
+              <Button variant="ghost">Autentificare</Button>
+            </Link>
+            <Link to="/auth">
+              <Button className="group">
                 Începe gratuit
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Link to="/auth">
-              <Button size="lg" variant="outline" className="text-lg px-8">
-                Autentificare
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 pt-32 pb-20 md:pt-40 md:pb-28">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center space-y-8 animate-fade-in">
+            <Badge variant="secondary" className="gap-2 px-4 py-2 text-sm">
+              <Sparkles className="h-4 w-4" />
+              Soluție completă pentru afaceri românești
+            </Badge>
+            
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
+              Facturare inteligentă<br />
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">
+                pentru România
+              </span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Automatizează facturarea, generează eFactura pentru ANAF și controlează cash-flow-ul 
+              afacerii tale. Totul într-o singură platformă modernă.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+              <Link to="/auth">
+                <Button size="lg" className="text-lg px-8 h-14 group shadow-lg hover:shadow-xl transition-all">
+                  Începe acum - gratuit
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+              <Button size="lg" variant="outline" className="text-lg px-8 h-14">
+                <Download className="mr-2 h-5 w-5" />
+                Vezi demo
               </Button>
-            </Link>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="flex flex-wrap items-center justify-center gap-8 pt-8 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span>Conformitate ANAF</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-blue-500" />
+                <span>Date securizate</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-yellow-500" />
+                <span>Setup instant</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-16 md:py-24">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Tot ce ai nevoie pentru facturare
-          </h2>
-          <p className="text-xl text-muted-foreground">
-            Simplu, rapid, și adaptat pentru România
-          </p>
+      <section className="container mx-auto px-4 py-20 md:py-32">
+        <div className="max-w-6xl mx-auto space-y-16">
+          <div className="text-center space-y-4 animate-fade-in">
+            <Badge variant="outline" className="mb-2">Funcționalități</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold">
+              Tot ce ai nevoie pentru<br />facturare profesională
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Soluție completă adaptată pentru nevoile afacerilor românești
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                icon: FileText,
+                title: "Facturare rapidă",
+                description: "Creează facturi profesionale în secunde. Export automat XML pentru eFactura ANAF.",
+                color: "from-blue-500 to-cyan-500",
+                delay: "0"
+              },
+              {
+                icon: TrendingUp,
+                title: "Urmărire cash-flow",
+                description: "Dashboard în timp real cu previziuni financiare și analize detaliate.",
+                color: "from-purple-500 to-pink-500",
+                delay: "100"
+              },
+              {
+                icon: Users,
+                title: "Colaborare contabil",
+                description: "Invită-ți contabilul pentru acces direct la date. Fără Excel, fără email-uri.",
+                color: "from-orange-500 to-red-500",
+                delay: "200"
+              },
+              {
+                icon: BarChart3,
+                title: "Rapoarte SAF-T",
+                description: "Generare automată lunară SAF-T (D406) pentru conformitate ANAF.",
+                color: "from-green-500 to-emerald-500",
+                delay: "300"
+              },
+              {
+                icon: Clock,
+                title: "Economisește timp",
+                description: "Automatizează procesele repetitive și concentrează-te pe afacere.",
+                color: "from-indigo-500 to-blue-500",
+                delay: "400"
+              },
+              {
+                icon: Shield,
+                title: "Securitate maximă",
+                description: "Date criptate, backup automat și conformitate GDPR garantată.",
+                color: "from-rose-500 to-pink-500",
+                delay: "500"
+              }
+            ].map((feature, idx) => (
+              <Card 
+                key={idx} 
+                className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/20 animate-fade-in overflow-hidden"
+                style={{ animationDelay: `${feature.delay}ms` }}
+              >
+                <CardContent className="p-8 space-y-4">
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center transform transition-transform group-hover:scale-110 group-hover:rotate-3`}>
+                    <feature.icon className="h-7 w-7 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <div className="bg-card p-8 rounded-2xl border shadow-lg hover:shadow-xl transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
-              <FileText className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-2xl font-bold mb-3">Facturare rapidă</h3>
-            <p className="text-muted-foreground">
-              Creează facturi profesionale în câteva secunde. Generează automat XML pentru eFactura ANAF.
-            </p>
-          </div>
-
-          <div className="bg-card p-8 rounded-2xl border shadow-lg hover:shadow-xl transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-accent/10 flex items-center justify-center mb-6">
-              <TrendingUp className="h-6 w-6 text-accent" />
-            </div>
-            <h3 className="text-2xl font-bold mb-3">Urmărire cash-flow</h3>
-            <p className="text-muted-foreground">
-              Monitorizează încasările și previzionează intrările de bani. Rămâi mereu la curent cu situația financiară.
-            </p>
-          </div>
-
-          <div className="bg-card p-8 rounded-2xl border shadow-lg hover:shadow-xl transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-2xl font-bold mb-3">Colaborare contabil</h3>
-            <p className="text-muted-foreground">
-              Invită-ți contabilul să acceseze datele direct din platformă. Fără Excel, fără email-uri.
-            </p>
-          </div>
+      {/* Stats Section */}
+      <section className="container mx-auto px-4 py-20">
+        <div className="max-w-6xl mx-auto">
+          <Card className="bg-gradient-to-br from-primary via-primary to-accent text-primary-foreground overflow-hidden relative">
+            <div className="absolute inset-0 bg-grid-white/10" />
+            <CardContent className="p-12 md:p-16 relative">
+              <div className="grid md:grid-cols-3 gap-12 text-center">
+                {[
+                  { value: "10,000+", label: "Facturi generate" },
+                  { value: "500+", label: "Companii active" },
+                  { value: "99.9%", label: "Uptime garantat" }
+                ].map((stat, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <div className="text-5xl md:text-6xl font-bold">{stat.value}</div>
+                    <div className="text-lg opacity-90">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16 md:py-24">
-        <div className="bg-gradient-to-r from-primary to-accent rounded-3xl p-12 md:p-16 text-center text-white shadow-2xl">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Gata să simplifici facturarea?
+      <section className="container mx-auto px-4 py-20 md:py-32">
+        <div className="max-w-4xl mx-auto text-center space-y-8 animate-fade-in">
+          <h2 className="text-4xl md:text-6xl font-bold">
+            Gata să simplifici<br />facturarea?
           </h2>
-          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-            Alătură-te miilor de PFA-uri și micro-SRL-uri care și-au simplificat deja procesul de facturare.
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Alătură-te miilor de PFA-uri și micro-SRL-uri care și-au simplificat procesul de facturare și conformitate fiscală.
           </p>
-          <Link to="/auth">
-            <Button size="lg" variant="secondary" className="text-lg px-8">
-              Începe acum - gratuit
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+            <Link to="/auth">
+              <Button size="lg" className="text-lg px-8 h-14 group shadow-lg">
+                Începe acum - gratuit
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; 2025 SmartInvoice Romania. Creat pentru afaceri românești.</p>
+      <footer className="border-t bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <span className="font-bold text-lg">SmartInvoice</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Soluție modernă de facturare pentru afaceri românești
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Produs</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Funcționalități</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Prețuri</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Demo</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Companie</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Despre noi</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Legal</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Termeni și condiții</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Confidențialitate</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">GDPR</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t pt-8 text-center text-sm text-muted-foreground">
+            <p>&copy; 2025 SmartInvoice Romania. Creat cu ❤️ pentru afaceri românești.</p>
+          </div>
         </div>
       </footer>
     </div>

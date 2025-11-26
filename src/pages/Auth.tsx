@@ -31,7 +31,7 @@ const Auth = () => {
         toast.success("Autentificare reușită!");
         navigate("/dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -43,8 +43,16 @@ const Auth = () => {
         });
         
         if (error) throw error;
-        toast.success("Cont creat cu succes! Te poți autentifica acum.");
-        setIsLogin(true);
+        
+        // If session exists (auto-confirm enabled), redirect to dashboard
+        if (data.session) {
+          toast.success("Cont creat cu succes!");
+          navigate("/dashboard");
+        } else {
+          // Email confirmation required
+          toast.success("Cont creat cu succes! Verifică emailul pentru confirmare.");
+          setIsLogin(true);
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "A apărut o eroare");

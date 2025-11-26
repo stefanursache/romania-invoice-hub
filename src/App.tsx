@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import Expenses from "./pages/Expenses";
+import BankStatements from "./pages/BankStatements";
 import CompanyView from "./pages/CompanyView";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/reports" element={<Reports />} />
           <Route path="/chart-of-accounts" element={<ChartOfAccounts />} />
           <Route path="/expenses" element={<Expenses />} />
+          <Route path="/bank-statements" element={<BankStatements />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { AccountantNotifications } from "@/components/AccountantNotifications";
 import AccountantAccessRequest from "@/components/AccountantAccessRequest";
 import { useTranslation } from "react-i18next";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Building2, 
   FileText, 
@@ -21,7 +28,12 @@ import {
   Sparkles,
   BarChart3,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle,
+  Download,
+  Filter,
+  SortAsc,
+  Eye
 } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
@@ -47,6 +59,8 @@ const AccountantDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState<WorkspaceAccess[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "invoices" | "drafts" | "recent">("name");
+  const [filterBy, setFilterBy] = useState<"all" | "active" | "attention">("all");
 
   useEffect(() => {
     checkAuth();
@@ -136,10 +150,32 @@ const AccountantDashboard = () => {
     navigate(`/company/${workspaceOwnerId}`);
   };
 
-  const filteredWorkspaces = workspaces.filter(workspace =>
+  // Filter workspaces
+  let filteredWorkspaces = workspaces.filter(workspace =>
     workspace.owner_profile.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     workspace.owner_profile.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Apply filter
+  if (filterBy === "attention") {
+    filteredWorkspaces = filteredWorkspaces.filter(ws => ws.stats.draftInvoices > 0);
+  }
+
+  // Sort workspaces
+  filteredWorkspaces.sort((a, b) => {
+    switch (sortBy) {
+      case "name":
+        return a.owner_profile.company_name.localeCompare(b.owner_profile.company_name);
+      case "invoices":
+        return b.stats.totalInvoices - a.stats.totalInvoices;
+      case "drafts":
+        return b.stats.draftInvoices - a.stats.draftInvoices;
+      case "recent":
+        return new Date(b.invited_at).getTime() - new Date(a.invited_at).getTime();
+      default:
+        return 0;
+    }
+  });
 
   const totalStats = workspaces.reduce(
     (acc, ws) => ({
@@ -164,20 +200,33 @@ const AccountantDashboard = () => {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-accent p-8 md:p-12 text-primary-foreground">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-accent p-6 md:p-10 text-primary-foreground">
           <div className="absolute inset-0 bg-grid-white/10" />
-          <div className="relative z-10 space-y-4">
-            <Badge variant="secondary" className="gap-2 mb-2">
-              <Sparkles className="h-3 w-3" />
-              Dashboard Contabil
-            </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold">
-              Bine ai venit înapoi! 👋
-            </h1>
-            <p className="text-lg opacity-90 max-w-2xl">
-              Gestionează toate companiile pentru care lucrezi dintr-un singur loc. 
-              Acces rapid la facturi, rapoarte și date financiare.
-            </p>
+          <div className="relative z-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="space-y-3">
+                <Badge variant="secondary" className="gap-2">
+                  <Sparkles className="h-3 w-3" />
+                  Dashboard Contabil
+                </Badge>
+                <h1 className="text-3xl md:text-4xl font-bold">
+                  Bine ai venit înapoi! 👋
+                </h1>
+                <p className="text-sm md:text-base opacity-90 max-w-2xl">
+                  Panou centralizat pentru toate companiile tale
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="secondary" size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Export global
+                </Button>
+                <Button variant="secondary" size="sm" className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Rapoarte
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -242,62 +291,58 @@ const AccountantDashboard = () => {
         ) : (
           <div className="space-y-8">
             {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-                <CardContent className="p-6 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <Badge variant="secondary" className="text-xs">Total</Badge>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <Badge variant="outline" className="text-xs">Total</Badge>
                   </div>
-                  <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-                    {workspaces.length}
-                  </div>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    Companii gestionate
-                  </p>
+                  <div className="text-2xl font-bold mb-1">{workspaces.length}</div>
+                  <p className="text-xs text-muted-foreground">Companii active</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/50 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
-                <CardContent className="p-6 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    <Badge variant="secondary" className="text-xs">Suma</Badge>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <Badge variant="outline" className="text-xs">Facturi</Badge>
                   </div>
-                  <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">
-                    {totalStats.totalInvoices}
-                  </div>
-                  <p className="text-sm text-purple-700 dark:text-purple-300">
-                    Facturi totale
-                  </p>
+                  <div className="text-2xl font-bold mb-1">{totalStats.totalInvoices}</div>
+                  <p className="text-xs text-muted-foreground">Documente totale</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
-                <CardContent className="p-6 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    <Badge variant="secondary" className="text-xs">Total</Badge>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <Badge variant="outline" className="text-xs">Clienți</Badge>
                   </div>
-                  <div className="text-3xl font-bold text-green-900 dark:text-green-100">
-                    {totalStats.totalClients}
-                  </div>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    Clienți totali
-                  </p>
+                  <div className="text-2xl font-bold mb-1">{totalStats.totalClients}</div>
+                  <p className="text-xs text-muted-foreground">Parteneri business</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/50 dark:to-orange-900/30 border-orange-200 dark:border-orange-800">
-                <CardContent className="p-6 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                    <Badge variant="secondary" className="text-xs">Ciorne</Badge>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <Badge variant="outline" className="text-xs border-orange-300">Urgent</Badge>
                   </div>
-                  <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
+                  <div className="text-2xl font-bold mb-1 text-orange-700 dark:text-orange-300">
                     {totalStats.draftInvoices}
                   </div>
-                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
                     Necesită atenție
                   </p>
                 </CardContent>
@@ -307,107 +352,146 @@ const AccountantDashboard = () => {
             {/* Notifications/Alerts Section */}
             <AccountantNotifications />
 
-            {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold">Companiile tale</h2>
-                <p className="text-sm text-muted-foreground">
-                  {filteredWorkspaces.length} {filteredWorkspaces.length === 1 ? 'companie' : 'companii'}
-                </p>
-              </div>
-              <div className="relative w-full sm:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Caută după nume sau email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+            {/* Search, Filter and Sort */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Caută companie după nume sau email..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Select value={filterBy} onValueChange={(v) => setFilterBy(v as any)}>
+                      <SelectTrigger className="w-[160px]">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Toate ({workspaces.length})</SelectItem>
+                        <SelectItem value="attention">
+                          Necesită atenție ({workspaces.filter(w => w.stats.draftInvoices > 0).length})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                      <SelectTrigger className="w-[160px]">
+                        <SortAsc className="h-4 w-4 mr-2" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Nume (A-Z)</SelectItem>
+                        <SelectItem value="invoices">Facturi (↓)</SelectItem>
+                        <SelectItem value="drafts">Ciorne (↓)</SelectItem>
+                        <SelectItem value="recent">Adăugate recent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    {filteredWorkspaces.length} {filteredWorkspaces.length === 1 ? 'companie găsită' : 'companii găsite'}
+                  </p>
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSearchQuery("")}
+                      className="h-7 text-xs"
+                    >
+                      Resetează căutarea
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Company Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredWorkspaces.map((workspace, idx) => (
                 <Card 
                   key={workspace.workspace_owner_id} 
-                  className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/20 overflow-hidden animate-fade-in"
-                  style={{ animationDelay: `${idx * 50}ms` }}
+                  className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                 >
-                  {/* Gradient header */}
-                  <div className="h-2 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] group-hover:animate-gradient" />
+                  {/* Status indicator */}
+                  {workspace.stats.draftInvoices > 0 ? (
+                    <div className="h-1.5 bg-gradient-to-r from-orange-400 to-orange-600" />
+                  ) : (
+                    <div className="h-1.5 bg-gradient-to-r from-green-400 to-green-600" />
+                  )}
                   
-                  <CardHeader className="space-y-4">
-                    <div className="flex items-start justify-between">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                          <Building2 className="h-7 w-7 text-primary" />
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-6 w-6 text-primary" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-lg truncate">
+                          <CardTitle className="text-base truncate mb-1">
                             {workspace.owner_profile.company_name}
                           </CardTitle>
-                          <CardDescription className="text-xs truncate mt-1">
+                          <CardDescription className="text-xs truncate">
                             {workspace.owner_profile.email}
                           </CardDescription>
                         </div>
                       </div>
-                      <Badge variant="secondary" className="flex-shrink-0">
-                        {workspace.role}
-                      </Badge>
+                      {workspace.stats.draftInvoices > 0 && (
+                        <Badge variant="outline" className="flex-shrink-0 border-orange-300 text-orange-700 dark:text-orange-400">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Atenție
+                        </Badge>
+                      )}
                     </div>
                   </CardHeader>
 
-                  <CardContent className="space-y-6">
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center space-y-2">
-                        <div className="w-10 h-10 mx-auto rounded-lg bg-primary/10 flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold">{workspace.stats.totalInvoices}</div>
-                          <p className="text-xs text-muted-foreground">Facturi</p>
-                        </div>
+                  <CardContent className="space-y-4">
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-primary">{workspace.stats.totalInvoices}</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Facturi</p>
                       </div>
-                      <div className="text-center space-y-2">
-                        <div className="w-10 h-10 mx-auto rounded-lg bg-accent/10 flex items-center justify-center">
-                          <Users className="h-5 w-5 text-accent" />
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold">{workspace.stats.totalClients}</div>
-                          <p className="text-xs text-muted-foreground">Clienți</p>
-                        </div>
+                      <div className="text-center border-x border-border">
+                        <div className="text-xl font-bold text-accent">{workspace.stats.totalClients}</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Clienți</p>
                       </div>
-                      <div className="text-center space-y-2">
-                        <div className="w-10 h-10 mx-auto rounded-lg bg-orange-500/10 flex items-center justify-center">
-                          <Clock className="h-5 w-5 text-orange-500" />
+                      <div className="text-center">
+                        <div className={`text-xl font-bold ${workspace.stats.draftInvoices > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                          {workspace.stats.draftInvoices}
                         </div>
-                        <div>
-                          <div className="text-2xl font-bold">{workspace.stats.draftInvoices}</div>
-                          <p className="text-xs text-muted-foreground">Ciorne</p>
-                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Ciorne</p>
                       </div>
                     </div>
 
-                    {/* Footer */}
-                    <div className="pt-4 border-t space-y-3">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 text-muted-foreground">
+                    {/* Action Footer */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pb-2">
+                        <div className="flex items-center gap-1.5">
                           <Calendar className="h-3 w-3" />
-                          <span>Din {format(new Date(workspace.invited_at), "dd MMM yyyy", { locale: ro })}</span>
+                          <span>Adăugat {format(new Date(workspace.invited_at), "dd MMM yyyy", { locale: ro })}</span>
                         </div>
                         <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                          <CheckCircle2 className="h-3 w-3" />
-                          <span className="font-medium">Activ</span>
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-xs font-medium">Activ</span>
                         </div>
                       </div>
                       <Button 
                         onClick={() => handleAccessWorkspace(workspace.workspace_owner_id)}
-                        className="w-full group/btn"
+                        className="w-full group-hover:shadow-md transition-all gap-2"
+                        size="sm"
                       >
-                        Acces la date
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                        <Eye className="h-4 w-4" />
+                        Accesează dashboard
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </div>
                   </CardContent>

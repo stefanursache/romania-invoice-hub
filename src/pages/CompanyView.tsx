@@ -15,6 +15,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { exportToCSV } from "@/utils/exportUtils";
+import { generateInvoicePDF } from "@/utils/pdfGenerator";
 
 interface Profile {
   company_name: string;
@@ -367,6 +369,80 @@ const CompanyView = () => {
     setExpensePreviewOpen(true);
   };
 
+  const handleDownloadInvoicePDF = async (invoice: Invoice) => {
+    try {
+      // Fetch full invoice details including client and items
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .select("*, clients(*)")
+        .eq("id", invoice.id)
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      const { data: items, error: itemsError } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", invoice.id)
+        .order("created_at", { ascending: true });
+
+      if (itemsError) throw itemsError;
+
+      // Format data for PDF generator
+      const pdfData = {
+        invoice_number: invoiceData.invoice_number,
+        issue_date: invoiceData.issue_date,
+        due_date: invoiceData.due_date,
+        currency: invoiceData.currency,
+        status: invoiceData.status,
+        subtotal: invoiceData.subtotal,
+        vat_amount: invoiceData.vat_amount,
+        total: invoiceData.total,
+        notes: invoiceData.notes,
+        client: {
+          name: invoiceData.clients.name,
+          cui_cif: invoiceData.clients.cui_cif,
+          reg_com: invoiceData.clients.reg_com,
+          address: invoiceData.clients.address,
+          email: invoiceData.clients.email,
+          phone: invoiceData.clients.phone,
+        },
+        items: items || [],
+      };
+
+      generateInvoicePDF(pdfData, {
+        company_name: profile?.company_name || "Company",
+        cui_cif: profile?.cui_cif,
+        reg_com: profile?.reg_com,
+        address: profile?.address,
+        bank_account: profile?.bank_account,
+      });
+
+      toast.success("Invoice PDF downloaded successfully!");
+    } catch (error: any) {
+      console.error("Error downloading invoice:", error);
+      toast.error("Failed to download invoice");
+    }
+  };
+
+  const handleExportExpensesToCSV = () => {
+    const csvData = expenses.map((expense) => ({
+      date: format(new Date(expense.expense_date), "yyyy-MM-dd"),
+      merchant: expense.merchant,
+      category: expense.category,
+      description: expense.description || "",
+      amount: expense.amount,
+      vat_amount: expense.vat_amount,
+      currency: expense.currency,
+      status: expense.status,
+      notes: expense.notes || "",
+    }));
+
+    const filename = `expenses_${profile?.company_name.replace(/\s+/g, "_")}_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    exportToCSV(csvData, filename);
+    toast.success("Expenses exported to CSV successfully!");
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "paid":
@@ -562,8 +638,12 @@ const CompanyView = () => {
           <TabsContent value="invoices">
             <Card>
               <CardHeader>
-                <CardTitle>Invoices ({totalInvoices})</CardTitle>
-                <CardDescription>All invoices for this company</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Invoices ({totalInvoices})</CardTitle>
+                    <CardDescription>All invoices for this company</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {invoices.length === 0 ? (
@@ -604,14 +684,24 @@ const CompanyView = () => {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handlePreviewInvoice(invoice)}
+                                title="Preview Invoice"
                               >
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDownloadInvoicePDF(invoice)}
+                                title="Download PDF"
+                              >
+                                <Download className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleGenerateEfactura(invoice.id)}
                                 disabled={generatingEfactura && selectedInvoiceForEfactura === invoice.id}
+                                title="Generate e-Factura"
                               >
                                 {generatingEfactura && selectedInvoiceForEfactura === invoice.id ? (
                                   <>
@@ -640,10 +730,20 @@ const CompanyView = () => {
           <TabsContent value="expenses">
             <Card>
               <CardHeader>
-                <CardTitle>Expenses ({expenses.length})</CardTitle>
-                <CardDescription>
-                  All expenses - Total: {totalExpenses.toFixed(2)} RON | VAT: {totalVAT.toFixed(2)} RON
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Expenses ({expenses.length})</CardTitle>
+                    <CardDescription>
+                      All expenses - Total: {totalExpenses.toFixed(2)} RON | VAT: {totalVAT.toFixed(2)} RON
+                    </CardDescription>
+                  </div>
+                  {expenses.length > 0 && (
+                    <Button onClick={handleExportExpensesToCSV} variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export to CSV
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {expenses.length === 0 ? (

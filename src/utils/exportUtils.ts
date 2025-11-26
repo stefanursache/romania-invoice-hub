@@ -1,4 +1,4 @@
-interface InvoiceExportData {
+export interface InvoiceExportData {
   invoice_number: string;
   issue_date: string;
   due_date: string;
@@ -10,40 +10,27 @@ interface InvoiceExportData {
   currency: string;
 }
 
-export const exportToCSV = (data: InvoiceExportData[], filename: string = "invoices.csv") => {
+export const exportToCSV = (data: any[], filename: string = "export.csv") => {
   if (data.length === 0) {
     alert("No data to export");
     return;
   }
 
-  // Define headers
-  const headers = [
-    "Invoice Number",
-    "Issue Date",
-    "Due Date",
-    "Client",
-    "Status",
-    "Subtotal",
-    "VAT",
-    "Total",
-    "Currency",
-  ];
-
-  // Convert data to CSV rows
+  // Get headers from the first object
+  const headers = Object.keys(data[0]);
+  
+  // Create CSV content
   const csvRows = [
     headers.join(","),
-    ...data.map((invoice) =>
-      [
-        invoice.invoice_number,
-        invoice.issue_date,
-        invoice.due_date,
-        `"${invoice.client_name}"`, // Quote client name in case of commas
-        invoice.status,
-        invoice.subtotal,
-        invoice.vat_amount,
-        invoice.total,
-        invoice.currency,
-      ].join(",")
+    ...data.map((row) =>
+      headers.map(header => {
+        const value = row[header];
+        // Quote strings that contain commas or quotes
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      }).join(",")
     ),
   ];
 

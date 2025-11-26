@@ -69,6 +69,8 @@ const Invoices = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    console.log("🔐 Current user ID:", user.id);
+
     // Check if user is an accountant
     const { data: memberData } = await supabase
       .from("workspace_members")
@@ -76,12 +78,17 @@ const Invoices = () => {
       .eq("member_user_id", user.id)
       .maybeSingle();
 
+    console.log("👥 Workspace member data:", memberData);
+
     const detectedRole = memberData?.role || "owner";
+    console.log("🎭 Detected role:", detectedRole);
+    
     setUserRole(detectedRole);
     
     // Store workspace owner ID if accountant
     if (detectedRole === "accountant" && memberData?.workspace_owner_id) {
       setWorkspaceOwnerId(memberData.workspace_owner_id);
+      console.log("🏢 Workspace owner ID:", memberData.workspace_owner_id);
     }
     
     loadInvoices();
@@ -129,6 +136,8 @@ const Invoices = () => {
       toast.error("Eroare la încărcarea facturilor");
       console.error(error);
     } else {
+      console.log("📋 Loaded invoices:", data);
+      console.log("📊 Total invoices count:", data?.length);
       setInvoices(data || []);
     }
     setLoading(false);
@@ -692,7 +701,16 @@ const Invoices = () => {
                           <FileCode className="h-4 w-4" />
                         )}
                        </Button>
-                       {userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent" && (
+                       {(() => {
+                         const shouldShow = userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent";
+                         console.log(`🔍 Invoice ${invoice.invoice_number} approval button check:`, {
+                           userRole,
+                           accountant_approved: invoice.accountant_approved,
+                           status: invoice.status,
+                           shouldShow
+                         });
+                         return shouldShow;
+                       })() && (
                          <Button
                            size="sm"
                            variant="default"

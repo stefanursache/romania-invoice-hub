@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, LogOut, Users, Shield, Crown, CreditCard, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
+import { WebhookEventsManager } from "@/components/WebhookEventsManager";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -242,6 +243,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="roles">Roluri</TabsTrigger>
             <TabsTrigger value="requests">Cereri Acces</TabsTrigger>
             <TabsTrigger value="payments">Plăți</TabsTrigger>
+            <TabsTrigger value="webhooks">Webhooks & Retry</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profiles" className="space-y-4">
@@ -584,6 +586,10 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="webhooks" className="space-y-4">
+            <WebhookEventsManager />
           </TabsContent>
         </Tabs>
       </main>

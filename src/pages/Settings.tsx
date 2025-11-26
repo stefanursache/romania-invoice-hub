@@ -56,6 +56,8 @@ const Settings = () => {
   const [subscription, setSubscription] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [testingSpvCredentials, setTestingSpvCredentials] = useState(false);
+  const [spvTestResult, setSpvTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [profile, setProfile] = useState<Profile>({
     company_name: "",
     cui_cif: "",
@@ -335,6 +337,43 @@ const Settings = () => {
     }
   };
 
+  const handleTestSpvCredentials = async () => {
+    if (!profile.spv_client_id || !profile.spv_client_secret) {
+      toast.error('Vă rugăm introduceți Client ID și Client Secret');
+      return;
+    }
+
+    setTestingSpvCredentials(true);
+    setSpvTestResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('test-spv-credentials', {
+        body: {
+          clientId: profile.spv_client_id,
+          clientSecret: profile.spv_client_secret,
+          workspaceOwnerId: isViewingClient ? profileOwnerId : undefined,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setSpvTestResult({ success: true, message: data.message });
+        toast.success('Credențialele SPV sunt valide! ✅');
+      } else {
+        setSpvTestResult({ success: false, message: data.error });
+        toast.error(`Test eșuat: ${data.error}`);
+      }
+    } catch (error: any) {
+      console.error('Error testing SPV credentials:', error);
+      const errorMessage = error.message || 'Eroare la testarea credențialelor';
+      setSpvTestResult({ success: false, message: errorMessage });
+      toast.error(errorMessage);
+    } finally {
+      setTestingSpvCredentials(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -572,7 +611,10 @@ const Settings = () => {
                         id="spv_client_id"
                         type="text"
                         value={profile.spv_client_id || ""}
-                        onChange={(e) => setProfile({ ...profile, spv_client_id: e.target.value })}
+                        onChange={(e) => {
+                          setProfile({ ...profile, spv_client_id: e.target.value });
+                          setSpvTestResult(null); // Clear test result when credentials change
+                        }}
                         placeholder="ex: 1234567890abcdefghij"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -586,7 +628,10 @@ const Settings = () => {
                         id="spv_client_secret"
                         type="password"
                         value={profile.spv_client_secret || ""}
-                        onChange={(e) => setProfile({ ...profile, spv_client_secret: e.target.value })}
+                        onChange={(e) => {
+                          setProfile({ ...profile, spv_client_secret: e.target.value });
+                          setSpvTestResult(null); // Clear test result when credentials change
+                        }}
                         placeholder="••••••••••••••••••••"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -594,13 +639,58 @@ const Settings = () => {
                       </p>
                     </div>
 
+                    {/* Test Connection Button */}
                     {profile.spv_client_id && profile.spv_client_secret && (
-                      <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-                        <p className="text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
-                          ✅ <strong>Credențialele SPV sunt configurate!</strong>
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleTestSpvCredentials}
+                          disabled={testingSpvCredentials}
+                        >
+                          {testingSpvCredentials ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Testare conexiune...
+                            </>
+                          ) : (
+                            'Testează conexiunea'
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Test Result Display */}
+                    {spvTestResult && (
+                      <div className={`p-3 border rounded-lg ${
+                        spvTestResult.success 
+                          ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+                          : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                      }`}>
+                        <p className={`text-sm font-semibold flex items-center gap-2 ${
+                          spvTestResult.success 
+                            ? 'text-green-900 dark:text-green-100'
+                            : 'text-red-900 dark:text-red-100'
+                        }`}>
+                          {spvTestResult.success ? '✅' : '❌'} {spvTestResult.success ? 'Test reușit!' : 'Test eșuat'}
                         </p>
-                        <p className="text-xs text-green-900 dark:text-green-100 mt-1">
-                          Poți trimite facturi direct în SPV din pagina Facturi
+                        <p className={`text-xs mt-1 ${
+                          spvTestResult.success 
+                            ? 'text-green-900 dark:text-green-100'
+                            : 'text-red-900 dark:text-red-100'
+                        }`}>
+                          {spvTestResult.message}
+                        </p>
+                      </div>
+                    )}
+
+                    {profile.spv_client_id && profile.spv_client_secret && !spvTestResult && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                          ℹ️ <strong>Recomandare:</strong> Testează conexiunea înainte de a salva
+                        </p>
+                        <p className="text-xs text-blue-900 dark:text-blue-100 mt-1">
+                          Verificăm dacă credențialele sunt valide și accesul la API-ul ANAF funcționează
                         </p>
                       </div>
                     )}

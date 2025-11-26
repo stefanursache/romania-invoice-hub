@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,6 +43,7 @@ const passwordSchema = z.object({
 
 const Settings = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -569,7 +571,7 @@ const Settings = () => {
                     <div className="text-center py-8">
                       <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                       <p className="text-muted-foreground mb-4">Nu ai încă un abonament activ</p>
-                      <Button>Alege un plan</Button>
+                      <Button onClick={() => navigate('/pricing')}>Alege un plan</Button>
                     </div>
                   )}
                 </CardContent>

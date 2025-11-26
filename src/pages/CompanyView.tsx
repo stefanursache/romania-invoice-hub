@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet } from "lucide-react";
+import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -71,6 +71,16 @@ interface Account {
   account_type: string | null;
 }
 
+interface BankStatement {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  upload_date: string;
+  statement_date: string | null;
+  notes: string | null;
+}
+
 const CompanyView = () => {
   const navigate = useNavigate();
   const { companyId } = useParams();
@@ -80,6 +90,7 @@ const CompanyView = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [saftExports, setSaftExports] = useState<SaftExport[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [bankStatements, setBankStatements] = useState<BankStatement[]>([]);
   const [generatingSaft, setGeneratingSaft] = useState(false);
   const [generatingEfactura, setGeneratingEfactura] = useState(false);
   const [saftDialogOpen, setSaftDialogOpen] = useState(false);
@@ -147,6 +158,7 @@ const CompanyView = () => {
         loadExpenses(),
         loadSaftExports(),
         loadAccounts(),
+        loadBankStatements(),
       ]);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -225,6 +237,20 @@ const CompanyView = () => {
       console.error("Error loading accounts:", error);
     } else {
       setAccounts(data || []);
+    }
+  };
+
+  const loadBankStatements = async () => {
+    const { data, error } = await supabase
+      .from("bank_statements")
+      .select("*")
+      .eq("user_id", companyId)
+      .order("upload_date", { ascending: false });
+
+    if (error) {
+      console.error("Error loading bank statements:", error);
+    } else {
+      setBankStatements(data || []);
     }
   };
 
@@ -467,7 +493,7 @@ const CompanyView = () => {
 
         {/* Tabbed Content */}
         <Tabs defaultValue="profile" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="profile">
               <User className="h-4 w-4 mr-2" />
               Profile
@@ -479,6 +505,10 @@ const CompanyView = () => {
             <TabsTrigger value="expenses">
               <Receipt className="h-4 w-4 mr-2" />
               Expenses
+            </TabsTrigger>
+            <TabsTrigger value="bank-statements">
+              <Landmark className="h-4 w-4 mr-2" />
+              Bank Statements
             </TabsTrigger>
             <TabsTrigger value="reports">
               <BarChart3 className="h-4 w-4 mr-2" />
@@ -675,6 +705,93 @@ const CompanyView = () => {
                               onClick={() => handlePreviewExpense(expense)}
                             >
                               <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Bank Statements Tab */}
+          <TabsContent value="bank-statements">
+            <Card>
+              <CardHeader>
+                <CardTitle>Bank Statements ({bankStatements.length})</CardTitle>
+                <CardDescription>Bank statements uploaded by the company</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {bankStatements.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Landmark className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No bank statements found</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>File Name</TableHead>
+                        <TableHead>Statement Date</TableHead>
+                        <TableHead>Upload Date</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bankStatements.map((statement) => (
+                        <TableRow key={statement.id}>
+                          <TableCell className="font-medium">{statement.file_name}</TableCell>
+                          <TableCell>
+                            {statement.statement_date
+                              ? format(new Date(statement.statement_date), "dd MMM yyyy")
+                              : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(statement.upload_date), "dd MMM yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell>
+                            {statement.file_size < 1024
+                              ? `${statement.file_size} B`
+                              : statement.file_size < 1024 * 1024
+                              ? `${(statement.file_size / 1024).toFixed(1)} KB`
+                              : `${(statement.file_size / (1024 * 1024)).toFixed(1)} MB`}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {statement.notes || "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => {
+                                try {
+                                  const { data, error } = await supabase.storage
+                                    .from("bank-statements")
+                                    .download(statement.file_path);
+
+                                  if (error) throw error;
+
+                                  const url = URL.createObjectURL(data);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = statement.file_name;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+
+                                  toast.success("Download started");
+                                } catch (error: any) {
+                                  console.error("Error downloading statement:", error);
+                                  toast.error("Failed to download file");
+                                }
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
                             </Button>
                           </TableCell>
                         </TableRow>

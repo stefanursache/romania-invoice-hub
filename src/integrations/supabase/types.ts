@@ -77,6 +77,45 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_statements: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          notes: string | null
+          statement_date: string | null
+          updated_at: string | null
+          upload_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          notes?: string | null
+          statement_date?: string | null
+          updated_at?: string | null
+          upload_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          notes?: string | null
+          statement_date?: string | null
+          updated_at?: string | null
+          upload_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -116,6 +155,27 @@ export type Database = {
           reg_com?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      currency_rates: {
+        Row: {
+          currency_code: string
+          id: string
+          rate_to_ron: number
+          updated_at: string | null
+        }
+        Insert: {
+          currency_code: string
+          id?: string
+          rate_to_ron: number
+          updated_at?: string | null
+        }
+        Update: {
+          currency_code?: string
+          id?: string
+          rate_to_ron?: number
+          updated_at?: string | null
         }
         Relationships: []
       }

@@ -33,15 +33,25 @@ export default function AccessRequestsManagement() {
   const loadRequests = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log("AccessRequestsManagement: No user found");
+        return;
+      }
+
+      console.log("AccessRequestsManagement: Loading requests for user:", user.id);
 
       const { data, error } = await supabase
         .from("access_requests")
         .select("*")
-        .or(`business_owner_id.eq.${user.id},business_owner_email.eq.${user.email}`)
+        .eq("business_owner_id", user.id)
         .order("requested_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("AccessRequestsManagement: Error loading requests:", error);
+        throw error;
+      }
+
+      console.log("AccessRequestsManagement: Loaded requests:", data?.length || 0);
 
       // Fetch accountant profiles
       if (data && data.length > 0) {
@@ -60,9 +70,11 @@ export default function AccessRequestsManagement() {
         
         setRequests(requestsWithProfiles);
       } else {
+        console.log("AccessRequestsManagement: No requests found");
         setRequests([]);
       }
     } catch (error: any) {
+      console.error("AccessRequestsManagement: Failed to load requests:", error);
       toast({
         variant: "destructive",
         title: t("common.error"),

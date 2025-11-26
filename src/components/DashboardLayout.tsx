@@ -5,6 +5,14 @@ import { Session, User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -26,7 +34,8 @@ import {
   ArrowLeft,
   Building2,
   ChevronDown,
-  Check
+  Check,
+  Home
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -184,6 +193,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { href: "/settings", icon: Settings, label: "Setări" },
   ];
 
+  const getPageName = (path: string) => {
+    const item = navItems.find(nav => nav.href === path);
+    return item?.label || "Pagină";
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -317,6 +331,71 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen">
+        {/* Breadcrumb Navigation for Accountants */}
+        {userRole === "accountant" && (
+          <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20">
+            <div className="p-4 lg:px-8 lg:py-4">
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link to="/accountant-dashboard" className="flex items-center gap-2">
+                        <Home className="h-4 w-4" />
+                        Companiile mele
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  
+                  {viewingCompany && activeWorkspaceId && (
+                    <>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground">
+                            <Building2 className="h-4 w-4" />
+                            {viewingCompany}
+                            <ChevronDown className="h-3 w-3" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-[280px] bg-popover z-50">
+                            <DropdownMenuLabel>Schimbă compania</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {availableWorkspaces.map((workspace) => (
+                              <DropdownMenuItem
+                                key={workspace.id}
+                                onClick={() => handleSwitchWorkspace(workspace.id)}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="h-4 w-4" />
+                                    <span className="truncate">{workspace.name}</span>
+                                  </div>
+                                  {activeWorkspaceId === workspace.id && (
+                                    <Check className="h-4 w-4 text-primary" />
+                                  )}
+                                </div>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </BreadcrumbItem>
+                      
+                      {location.pathname !== "/dashboard" && location.pathname !== "/accountant-dashboard" && (
+                        <>
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem>
+                            <BreadcrumbPage>{getPageName(location.pathname)}</BreadcrumbPage>
+                          </BreadcrumbItem>
+                        </>
+                      )}
+                    </>
+                  )}
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+          </div>
+        )}
+        
         <div className="p-4 lg:p-8 pt-20 lg:pt-8">
           {children}
         </div>

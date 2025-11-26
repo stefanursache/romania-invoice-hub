@@ -48,6 +48,7 @@ const Invoices = () => {
   const [downloadingXml, setDownloadingXml] = useState<Record<string, boolean>>({});
   const [sendingToSpv, setSendingToSpv] = useState<Record<string, boolean>>({});
   const [userRole, setUserRole] = useState<string>("owner");
+  const [workspaceOwnerId, setWorkspaceOwnerId] = useState<string | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<any>(null);
   const [previewItems, setPreviewItems] = useState<any[]>([]);
@@ -71,19 +72,23 @@ const Invoices = () => {
     // Check if user is an accountant
     const { data: memberData } = await supabase
       .from("workspace_members")
-      .select("role")
+      .select("role, workspace_owner_id")
       .eq("member_user_id", user.id)
       .maybeSingle();
 
-    console.log("🔍 User role check:", memberData);
     const detectedRole = memberData?.role || "owner";
-    console.log("👤 Detected user role:", detectedRole);
-    
     setUserRole(detectedRole);
+    
+    // Store workspace owner ID if accountant
+    if (detectedRole === "accountant" && memberData?.workspace_owner_id) {
+      setWorkspaceOwnerId(memberData.workspace_owner_id);
+    }
+    
     loadInvoices();
   };
 
   const loadInvoices = async () => {
+    setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -99,7 +104,12 @@ const Invoices = () => {
       .select(`
         *,
         clients (
-          name
+          name,
+          cui_cif,
+          email,
+          phone,
+          address,
+          payment_terms
         )
       `)
       .order("created_at", { ascending: false });
@@ -119,8 +129,6 @@ const Invoices = () => {
       toast.error("Eroare la încărcarea facturilor");
       console.error(error);
     } else {
-      console.log("📋 Loaded invoices:", data);
-      console.log("📊 Total invoices:", data?.length);
       setInvoices(data || []);
     }
     setLoading(false);
@@ -684,16 +692,7 @@ const Invoices = () => {
                           <FileCode className="h-4 w-4" />
                         )}
                        </Button>
-                       {(() => {
-                         const showApproveBtn = userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent";
-                         console.log(`✅ Invoice ${invoice.invoice_number}:`, {
-                           userRole,
-                           accountant_approved: invoice.accountant_approved,
-                           status: invoice.status,
-                           showApproveBtn
-                         });
-                         return showApproveBtn;
-                       })() && (
+                       {userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent" && (
                          <Button
                            size="sm"
                            variant="default"

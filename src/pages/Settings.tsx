@@ -50,6 +50,7 @@ const Settings = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     company_name: "",
     cui_cif: "",
@@ -266,6 +267,37 @@ const Settings = () => {
       toast.error("A apărut o eroare");
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleSelectPlan = async (planName: string) => {
+    if (planName === 'Gratuit') {
+      toast.info('Planul Gratuit este deja activ pentru toate conturile noi');
+      return;
+    }
+
+    setProcessingPayment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          planName,
+          billingPeriod: 'monthly', // Default to monthly, can be made configurable
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error);
+      toast.error(error.message || 'Eroare la procesarea plății. Vă rugăm contactați administratorul.');
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -643,8 +675,12 @@ const Settings = () => {
                                 <span>SAF-T (D406) automat</span>
                               </li>
                             </ul>
-                            <Button className="w-full" onClick={() => toast.info("Integrare plăți în curând!")}>
-                              Selectează Starter
+                            <Button 
+                              className="w-full" 
+                              onClick={() => handleSelectPlan('Starter')}
+                              disabled={processingPayment}
+                            >
+                              {processingPayment ? 'Se procesează...' : 'Selectează Starter'}
                             </Button>
                           </CardContent>
                         </Card>
@@ -675,8 +711,13 @@ const Settings = () => {
                                 <span>Suport prioritar 24/7</span>
                               </li>
                             </ul>
-                            <Button className="w-full" variant="outline" onClick={() => toast.info("Integrare plăți în curând!")}>
-                              Selectează Professional
+                            <Button 
+                              className="w-full" 
+                              variant="outline" 
+                              onClick={() => handleSelectPlan('Professional')}
+                              disabled={processingPayment}
+                            >
+                              {processingPayment ? 'Se procesează...' : 'Selectează Professional'}
                             </Button>
                           </CardContent>
                         </Card>

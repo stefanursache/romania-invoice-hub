@@ -38,6 +38,25 @@ export default function Team() {
       navigate("/auth");
       return;
     }
+
+    // Check if user is an accountant
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id)
+      .single();
+
+    // Accountants should not access team management
+    if (roleData?.role === "accountant") {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "Accountants cannot manage team members. This is for business owners only.",
+      });
+      navigate("/accountant-dashboard");
+      return;
+    }
+
     setCurrentUserId(session.user.id);
     loadMembers();
   };

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Building2, KeyRound, User } from "lucide-react";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 
 interface Profile {
   company_name: string;
@@ -38,9 +39,11 @@ const passwordSchema = z.object({
 });
 
 const Settings = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile>({
     company_name: "",
     cui_cif: "",
@@ -66,6 +69,15 @@ const Settings = () => {
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Check user role
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+    
+    setUserRole(roleData?.role || null);
 
     const { data, error } = await supabase
       .from("profiles")
@@ -179,8 +191,15 @@ const Settings = () => {
     <DashboardLayout>
       <div className="max-w-4xl space-y-6">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Setări cont</h1>
-          <p className="text-muted-foreground">Gestionează informațiile companiei și securitatea contului</p>
+          <h1 className="text-4xl font-bold mb-2">{t('settings.title')}</h1>
+          <p className="text-muted-foreground">{t('settings.subtitle')}</p>
+          {userRole === "accountant" && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                <strong>{t('settings.accountantNote')}</strong> {t('settings.accountantNoteDesc')}
+              </p>
+            </div>
+          )}
         </div>
 
         <Tabs defaultValue="company" className="w-full">

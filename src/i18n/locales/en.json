@@ -142,6 +142,8 @@
   "settings": {
     "title": "Account Settings",
     "subtitle": "Manage your company information and account security",
+    "accountantNote": "Note for Accountants:",
+    "accountantNoteDesc": "These are your personal account settings. To view or modify a client company's information, go to their company page.",
     "company": "Company",
     "contact": "Contact",
     "security": "Security",

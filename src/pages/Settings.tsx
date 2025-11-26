@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2, KeyRound, User } from "lucide-react";
+import { z } from "zod";
 
 interface Profile {
   company_name: string;
@@ -15,17 +17,46 @@ interface Profile {
   reg_com: string | null;
   address: string | null;
   bank_account: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  county: string | null;
+  postal_code: string | null;
 }
+
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Parola curentă este obligatorie"),
+  newPassword: z.string()
+    .min(8, "Parola nouă trebuie să conțină minimum 8 caractere")
+    .regex(/[A-Z]/, "Trebuie să conțină cel puțin o literă mare")
+    .regex(/[a-z]/, "Trebuie să conțină cel puțin o literă mică")
+    .regex(/[0-9]/, "Trebuie să conțină cel puțin o cifră"),
+  confirmPassword: z.string()
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Parolele nu coincid",
+  path: ["confirmPassword"],
+});
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     company_name: "",
     cui_cif: "",
     reg_com: "",
     address: "",
     bank_account: "",
+    phone: "",
+    email: "",
+    city: "",
+    county: "",
+    postal_code: "",
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   useEffect(() => {
@@ -51,6 +82,11 @@ const Settings = () => {
         reg_com: data.reg_com || "",
         address: data.address || "",
         bank_account: data.bank_account || "",
+        phone: data.phone || "",
+        email: data.email || "",
+        city: data.city || "",
+        county: data.county || "",
+        postal_code: data.postal_code || "",
       });
     }
     setLoading(false);
@@ -76,6 +112,59 @@ const Settings = () => {
     setSaving(false);
   };
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangingPassword(true);
+
+    try {
+      const validation = passwordSchema.safeParse(passwordData);
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        setChangingPassword(false);
+        return;
+      }
+
+      // Verify current password by attempting to sign in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        toast.error("Nu s-a putut identifica utilizatorul");
+        setChangingPassword(false);
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordData.currentPassword,
+      });
+
+      if (signInError) {
+        toast.error("Parola curentă este incorectă");
+        setChangingPassword(false);
+        return;
+      }
+
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword,
+      });
+
+      if (updateError) {
+        toast.error("Eroare la schimbarea parolei");
+      } else {
+        toast.success("Parolă schimbată cu succes!");
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      }
+    } catch (error) {
+      toast.error("A apărut o eroare");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -88,75 +177,224 @@ const Settings = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl space-y-6">
+      <div className="max-w-4xl space-y-6">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Setări</h1>
-          <p className="text-muted-foreground">Configurează datele companiei tale</p>
+          <h1 className="text-4xl font-bold mb-2">Setări cont</h1>
+          <p className="text-muted-foreground">Gestionează informațiile companiei și securitatea contului</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Informații companie</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="company_name">Nume companie *</Label>
-                <Input
-                  id="company_name"
-                  value={profile.company_name}
-                  onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
-                  required
-                />
-              </div>
+        <Tabs defaultValue="company" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="company" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Companie
+            </TabsTrigger>
+            <TabsTrigger value="contact" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Contact
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Securitate
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cui_cif">CUI/CIF</Label>
-                  <Input
-                    id="cui_cif"
-                    value={profile.cui_cif || ""}
-                    onChange={(e) => setProfile({ ...profile, cui_cif: e.target.value })}
-                  />
-                </div>
+          <TabsContent value="company" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informații companie</CardTitle>
+                <CardDescription>Datele firmei tale pentru facturi și documente oficiale</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="company_name">Nume companie *</Label>
+                    <Input
+                      id="company_name"
+                      value={profile.company_name}
+                      onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="reg_com">Nr. Reg. Com.</Label>
-                  <Input
-                    id="reg_com"
-                    value={profile.reg_com || ""}
-                    onChange={(e) => setProfile({ ...profile, reg_com: e.target.value })}
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cui_cif">CUI/CIF</Label>
+                      <Input
+                        id="cui_cif"
+                        value={profile.cui_cif || ""}
+                        onChange={(e) => setProfile({ ...profile, cui_cif: e.target.value })}
+                        placeholder="RO12345678"
+                      />
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Adresă</Label>
-                <Textarea
-                  id="address"
-                  value={profile.address || ""}
-                  onChange={(e) => setProfile({ ...profile, address: e.target.value })}
-                  rows={3}
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg_com">Nr. Reg. Com.</Label>
+                      <Input
+                        id="reg_com"
+                        value={profile.reg_com || ""}
+                        onChange={(e) => setProfile({ ...profile, reg_com: e.target.value })}
+                        placeholder="J40/1234/2020"
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bank_account">IBAN</Label>
-                <Input
-                  id="bank_account"
-                  value={profile.bank_account || ""}
-                  onChange={(e) => setProfile({ ...profile, bank_account: e.target.value })}
-                  placeholder="RO49AAAA1B31007593840000"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Adresă</Label>
+                    <Textarea
+                      id="address"
+                      value={profile.address || ""}
+                      onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                      rows={2}
+                      placeholder="Strada, număr, bloc, etc."
+                    />
+                  </div>
 
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvează modificările
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Oraș</Label>
+                      <Input
+                        id="city"
+                        value={profile.city || ""}
+                        onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                        placeholder="București"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="county">Județ</Label>
+                      <Input
+                        id="county"
+                        value={profile.county || ""}
+                        onChange={(e) => setProfile({ ...profile, county: e.target.value })}
+                        placeholder="Ilfov"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="postal_code">Cod poștal</Label>
+                      <Input
+                        id="postal_code"
+                        value={profile.postal_code || ""}
+                        onChange={(e) => setProfile({ ...profile, postal_code: e.target.value })}
+                        placeholder="012345"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bank_account">IBAN</Label>
+                    <Input
+                      id="bank_account"
+                      value={profile.bank_account || ""}
+                      onChange={(e) => setProfile({ ...profile, bank_account: e.target.value })}
+                      placeholder="RO49AAAA1B31007593840000"
+                    />
+                  </div>
+
+                  <Button type="submit" disabled={saving}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvează modificările
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="contact" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informații de contact</CardTitle>
+                <CardDescription>Date de contact pentru comunicare cu clienții</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profile.email || ""}
+                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                      placeholder="contact@firma.ro"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefon</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={profile.phone || ""}
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      placeholder="+40 123 456 789"
+                    />
+                  </div>
+
+                  <Button type="submit" disabled={saving}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvează modificările
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Schimbă parola</CardTitle>
+                <CardDescription>Asigură-te că folosești o parolă puternică pentru a-ți proteja contul</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Parola curentă</Label>
+                    <Input
+                      id="currentPassword"
+                      type="password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">Parola nouă</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      required
+                      minLength={8}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Minimum 8 caractere, o literă mare, o literă mică și o cifră
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmă parola nouă</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      required
+                      minLength={8}
+                    />
+                  </div>
+
+                  <Button type="submit" disabled={changingPassword}>
+                    {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Schimbă parola
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

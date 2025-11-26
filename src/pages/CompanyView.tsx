@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -82,6 +83,9 @@ const CompanyView = () => {
   const [saftPeriodFrom, setSaftPeriodFrom] = useState("");
   const [saftPeriodTo, setSaftPeriodTo] = useState("");
   const [selectedInvoiceForEfactura, setSelectedInvoiceForEfactura] = useState<string | null>(null);
+  const [efacturaPreviewOpen, setEfacturaPreviewOpen] = useState(false);
+  const [efacturaXmlContent, setEfacturaXmlContent] = useState("");
+  const [efacturaFilename, setEfacturaFilename] = useState("");
 
   useEffect(() => {
     checkAccess();
@@ -273,19 +277,13 @@ const CompanyView = () => {
 
       if (error) throw error;
 
-      // Create download link
+      // Store XML content and filename for preview
       const invoice = invoices.find(inv => inv.id === invoiceId);
-      const blob = new Blob([data], { type: "application/xml" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `eFactura-${invoice?.invoice_number || invoiceId}.xml`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setEfacturaXmlContent(data);
+      setEfacturaFilename(`eFactura-${invoice?.invoice_number || invoiceId}.xml`);
+      setEfacturaPreviewOpen(true);
 
-      toast.success("e-Factura generated successfully!");
+      toast.success("e-Factura preview ready!");
     } catch (error: any) {
       console.error("Error generating e-Factura:", error);
       toast.error(error.message || "Failed to generate e-Factura");
@@ -293,6 +291,21 @@ const CompanyView = () => {
       setGeneratingEfactura(false);
       setSelectedInvoiceForEfactura(null);
     }
+  };
+
+  const handleDownloadEfactura = () => {
+    const blob = new Blob([efacturaXmlContent], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = efacturaFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success("e-Factura downloaded successfully!");
+    setEfacturaPreviewOpen(false);
   };
 
   const getStatusColor = (status: string) => {
@@ -750,6 +763,32 @@ const CompanyView = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* e-Factura Preview Dialog */}
+        <Dialog open={efacturaPreviewOpen} onOpenChange={setEfacturaPreviewOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>e-Factura XML Preview</DialogTitle>
+              <DialogDescription>
+                Review the generated e-Factura XML before downloading
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="h-[400px] w-full rounded-md border bg-muted/30 p-4">
+              <pre className="text-xs font-mono whitespace-pre-wrap break-all">
+                {efacturaXmlContent}
+              </pre>
+            </ScrollArea>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEfacturaPreviewOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleDownloadEfactura}>
+                <Download className="h-4 w-4 mr-2" />
+                Download XML
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

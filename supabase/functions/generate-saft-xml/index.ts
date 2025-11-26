@@ -340,6 +340,21 @@ serve(async (req) => {
       throw new Error('Error fetching invoices');
     }
 
+    // Check if all invoices are approved
+    const unapprovedInvoices = (invoices || []).filter(inv => !inv.accountant_approved);
+    if (unapprovedInvoices.length > 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'All invoices must be approved by accountant before generating SAF-T export',
+          unapprovedInvoices: unapprovedInvoices.map(inv => inv.invoice_number)
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Fetch invoice items for all invoices
     const invoiceIds = invoices.map(inv => inv.id);
     const { data: allItems, error: itemsError } = await supabaseClient

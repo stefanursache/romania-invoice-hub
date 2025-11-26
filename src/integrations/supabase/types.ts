@@ -351,6 +351,9 @@ export type Database = {
       }
       invoices: {
         Row: {
+          accountant_approved: boolean | null
+          approved_at: string | null
+          approved_by: string | null
           client_id: string
           created_at: string | null
           currency: string | null
@@ -368,6 +371,9 @@ export type Database = {
           vat_amount: number
         }
         Insert: {
+          accountant_approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id: string
           created_at?: string | null
           currency?: string | null
@@ -385,6 +391,9 @@ export type Database = {
           vat_amount?: number
         }
         Update: {
+          accountant_approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string
           created_at?: string | null
           currency?: string | null

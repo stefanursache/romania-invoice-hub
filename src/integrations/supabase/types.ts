@@ -269,6 +269,39 @@ export type Database = {
         }
         Relationships: []
       }
+      invitation_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          is_used: boolean
+          used_at: string | null
+          used_by: string | null
+          workspace_owner_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+          workspace_owner_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+          workspace_owner_id?: string
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string | null
@@ -586,6 +619,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      generate_invitation_code: { Args: never; Returns: string }
       get_business_user_by_email: {
         Args: { user_email: string }
         Returns: {

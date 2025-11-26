@@ -9,6 +9,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { UserPlus, Trash2, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AccessRequestsManagement from "@/components/AccessRequestsManagement";
+import { InvitationCodeGenerator } from "@/components/InvitationCodeGenerator";
 
 interface TeamMember {
   id: string;
@@ -219,6 +220,8 @@ export default function Team() {
         </div>
 
         <AccessRequestsManagement />
+
+        <InvitationCodeGenerator />
 
         <Card>
           <CardHeader>

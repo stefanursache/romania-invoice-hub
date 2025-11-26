@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { AccountantNotifications } from "@/components/AccountantNotifications";
 import AccountantAccessRequest from "@/components/AccountantAccessRequest";
+import { InvitationCodeInput } from "@/components/InvitationCodeInput";
 import { useTranslation } from "react-i18next";
 import {
   Select,
@@ -231,6 +232,8 @@ const AccountantDashboard = () => {
         </div>
 
         <AccountantAccessRequest />
+
+        <InvitationCodeInput />
 
         {workspaces.length === 0 ? (
           <Card className="border-2 border-dashed">

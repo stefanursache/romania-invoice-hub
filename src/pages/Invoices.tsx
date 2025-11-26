@@ -11,6 +11,7 @@ import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { exportToCSV } from "@/utils/exportUtils";
 import { InvoiceImageUpload } from "@/components/InvoiceImageUpload";
 import { InvoicePreview } from "@/components/InvoicePreview";
+import { InvoiceApprovalDialog } from "@/components/InvoiceApprovalDialog";
 import { 
   validateProfileForEFactura, 
   validateClientForEFactura,
@@ -33,6 +34,7 @@ interface Invoice {
   accountant_approved: boolean;
   approved_by?: string;
   approved_at?: string;
+  approval_notes?: string;
   clients: {
     name: string;
   };
@@ -51,6 +53,11 @@ const Invoices = () => {
   const [previewCompany, setPreviewCompany] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [approvingInvoice, setApprovingInvoice] = useState<Record<string, boolean>>({});
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [selectedInvoiceForApproval, setSelectedInvoiceForApproval] = useState<{
+    id: string;
+    number: string;
+  } | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -321,8 +328,15 @@ const Invoices = () => {
     }
   };
 
-  const handleApproveInvoice = async (invoiceId: string) => {
-    setApprovingInvoice((prev) => ({ ...prev, [invoiceId]: true }));
+  const openApprovalDialog = (invoiceId: string, invoiceNumber: string) => {
+    setSelectedInvoiceForApproval({ id: invoiceId, number: invoiceNumber });
+    setApprovalDialogOpen(true);
+  };
+
+  const handleApproveInvoice = async (notes: string) => {
+    if (!selectedInvoiceForApproval) return;
+    
+    setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: true }));
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -333,19 +347,56 @@ const Invoices = () => {
         .update({
           accountant_approved: true,
           approved_by: user.id,
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
+          approval_notes: notes || null
         })
-        .eq('id', invoiceId);
+        .eq('id', selectedInvoiceForApproval.id);
 
       if (error) throw error;
 
       toast.success("Factură aprobată cu succes!");
+      setApprovalDialogOpen(false);
+      setSelectedInvoiceForApproval(null);
       loadInvoices();
     } catch (error: any) {
       console.error("Error approving invoice:", error);
       toast.error(error.message || "Eroare la aprobarea facturii");
     } finally {
-      setApprovingInvoice((prev) => ({ ...prev, [invoiceId]: false }));
+      setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: false }));
+    }
+  };
+
+  const handleRejectInvoice = async (notes: string) => {
+    if (!selectedInvoiceForApproval) return;
+    
+    setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: true }));
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          accountant_approved: false,
+          approved_by: null,
+          approved_at: null,
+          approval_notes: notes || "Factură respinsă de contabil",
+          status: 'draft'
+        })
+        .eq('id', selectedInvoiceForApproval.id);
+
+      if (error) throw error;
+
+      toast.success("Factură respinsă. Proprietarul va fi notificat.");
+      setApprovalDialogOpen(false);
+      setSelectedInvoiceForApproval(null);
+      loadInvoices();
+    } catch (error: any) {
+      console.error("Error rejecting invoice:", error);
+      toast.error(error.message || "Eroare la respingerea facturii");
+    } finally {
+      setApprovingInvoice((prev) => ({ ...prev, [selectedInvoiceForApproval.id]: false }));
     }
   };
 
@@ -600,13 +651,13 @@ const Invoices = () => {
                           <FileCode className="h-4 w-4" />
                         )}
                       </Button>
-                       {userRole === "accountant" && !invoice.accountant_approved && (
+                      {userRole === "accountant" && !invoice.accountant_approved && (
                         <Button
                           size="sm"
                           variant="default"
-                          onClick={() => handleApproveInvoice(invoice.id)}
+                          onClick={() => openApprovalDialog(invoice.id, invoice.invoice_number)}
                           disabled={approvingInvoice[invoice.id]}
-                          title="Aprobă factură"
+                          title="Revizie factură"
                         >
                           {approvingInvoice[invoice.id] ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -645,6 +696,15 @@ const Invoices = () => {
           invoice={previewInvoice}
           items={previewItems}
           company={previewCompany}
+        />
+
+        <InvoiceApprovalDialog
+          open={approvalDialogOpen}
+          onOpenChange={setApprovalDialogOpen}
+          onApprove={handleApproveInvoice}
+          onReject={handleRejectInvoice}
+          invoiceNumber={selectedInvoiceForApproval?.number || ""}
+          isLoading={selectedInvoiceForApproval ? approvingInvoice[selectedInvoiceForApproval.id] || false : false}
         />
       </div>
     </DashboardLayout>

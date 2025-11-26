@@ -352,6 +352,7 @@ export type Database = {
       invoices: {
         Row: {
           accountant_approved: boolean | null
+          approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
           client_id: string
@@ -372,6 +373,7 @@ export type Database = {
         }
         Insert: {
           accountant_approved?: boolean | null
+          approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
           client_id: string
@@ -392,6 +394,7 @@ export type Database = {
         }
         Update: {
           accountant_approved?: boolean | null
+          approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
           client_id?: string

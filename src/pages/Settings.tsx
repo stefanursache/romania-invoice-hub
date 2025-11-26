@@ -206,15 +206,17 @@ const Settings = () => {
           )}
         </div>
 
-        <Tabs defaultValue="company" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="company" className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Companie
-            </TabsTrigger>
-            <TabsTrigger value="contact" className="flex items-center gap-2">
+        <Tabs defaultValue={userRole === "accountant" ? "account" : "company"} className="w-full">
+          <TabsList className={`grid w-full ${userRole === "accountant" ? "grid-cols-2" : "grid-cols-3"}`}>
+            {userRole !== "accountant" && (
+              <TabsTrigger value="company" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Companie
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="account" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Contact
+              {userRole === "accountant" ? "Cont personal" : "Contact"}
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2">
               <KeyRound className="h-4 w-4" />
@@ -222,116 +224,138 @@ const Settings = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="company" className="space-y-4">
+          {userRole !== "accountant" && (
+            <TabsContent value="company" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informații companie</CardTitle>
+                  <CardDescription>Datele firmei tale pentru facturi și documente oficiale</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company_name">Nume companie *</Label>
+                      <Input
+                        id="company_name"
+                        value={profile.company_name}
+                        onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cui_cif">CUI/CIF</Label>
+                        <Input
+                          id="cui_cif"
+                          value={profile.cui_cif || ""}
+                          onChange={(e) => setProfile({ ...profile, cui_cif: e.target.value })}
+                          placeholder="RO12345678"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="reg_com">Nr. Reg. Com.</Label>
+                        <Input
+                          id="reg_com"
+                          value={profile.reg_com || ""}
+                          onChange={(e) => setProfile({ ...profile, reg_com: e.target.value })}
+                          placeholder="J40/1234/2020"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Adresă</Label>
+                      <Textarea
+                        id="address"
+                        value={profile.address || ""}
+                        onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                        rows={2}
+                        placeholder="Strada, număr, bloc, etc."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">Oraș</Label>
+                        <Input
+                          id="city"
+                          value={profile.city || ""}
+                          onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                          placeholder="București"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="county">Județ</Label>
+                        <Input
+                          id="county"
+                          value={profile.county || ""}
+                          onChange={(e) => setProfile({ ...profile, county: e.target.value })}
+                          placeholder="Ilfov"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="postal_code">Cod poștal</Label>
+                        <Input
+                          id="postal_code"
+                          value={profile.postal_code || ""}
+                          onChange={(e) => setProfile({ ...profile, postal_code: e.target.value })}
+                          placeholder="012345"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="bank_account">IBAN</Label>
+                      <Input
+                        id="bank_account"
+                        value={profile.bank_account || ""}
+                        onChange={(e) => setProfile({ ...profile, bank_account: e.target.value })}
+                        placeholder="RO49AAAA1B31007593840000"
+                      />
+                    </div>
+
+                    <Button type="submit" disabled={saving}>
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Salvează modificările
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          <TabsContent value="account" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Informații companie</CardTitle>
-                <CardDescription>Datele firmei tale pentru facturi și documente oficiale</CardDescription>
+                <CardTitle>{userRole === "accountant" ? "Informații cont" : "Informații de contact"}</CardTitle>
+                <CardDescription>
+                  {userRole === "accountant" 
+                    ? "Setările contului tău personal ca și contabil"
+                    : "Date de contact pentru comunicare cu clienții"}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="company_name">Nume companie *</Label>
-                    <Input
-                      id="company_name"
-                      value={profile.company_name}
-                      onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {userRole === "accountant" && (
                     <div className="space-y-2">
-                      <Label htmlFor="cui_cif">CUI/CIF</Label>
+                      <Label htmlFor="account_name">Nume afișat</Label>
                       <Input
-                        id="cui_cif"
-                        value={profile.cui_cif || ""}
-                        onChange={(e) => setProfile({ ...profile, cui_cif: e.target.value })}
-                        placeholder="RO12345678"
+                        id="account_name"
+                        value={profile.company_name}
+                        onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
+                        placeholder="Numele tău complet"
+                        required
                       />
+                      <p className="text-sm text-muted-foreground">
+                        Acest nume va fi vizibil pentru companiile pe care le gestionezi
+                      </p>
                     </div>
+                  )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="reg_com">Nr. Reg. Com.</Label>
-                      <Input
-                        id="reg_com"
-                        value={profile.reg_com || ""}
-                        onChange={(e) => setProfile({ ...profile, reg_com: e.target.value })}
-                        placeholder="J40/1234/2020"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Adresă</Label>
-                    <Textarea
-                      id="address"
-                      value={profile.address || ""}
-                      onChange={(e) => setProfile({ ...profile, address: e.target.value })}
-                      rows={2}
-                      placeholder="Strada, număr, bloc, etc."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">Oraș</Label>
-                      <Input
-                        id="city"
-                        value={profile.city || ""}
-                        onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                        placeholder="București"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="county">Județ</Label>
-                      <Input
-                        id="county"
-                        value={profile.county || ""}
-                        onChange={(e) => setProfile({ ...profile, county: e.target.value })}
-                        placeholder="Ilfov"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="postal_code">Cod poștal</Label>
-                      <Input
-                        id="postal_code"
-                        value={profile.postal_code || ""}
-                        onChange={(e) => setProfile({ ...profile, postal_code: e.target.value })}
-                        placeholder="012345"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bank_account">IBAN</Label>
-                    <Input
-                      id="bank_account"
-                      value={profile.bank_account || ""}
-                      onChange={(e) => setProfile({ ...profile, bank_account: e.target.value })}
-                      placeholder="RO49AAAA1B31007593840000"
-                    />
-                  </div>
-
-                  <Button type="submit" disabled={saving}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Salvează modificările
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="contact" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informații de contact</CardTitle>
-                <CardDescription>Date de contact pentru comunicare cu clienții</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -339,7 +363,7 @@ const Settings = () => {
                       type="email"
                       value={profile.email || ""}
                       onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      placeholder="contact@firma.ro"
+                      placeholder="email@example.com"
                     />
                   </div>
 

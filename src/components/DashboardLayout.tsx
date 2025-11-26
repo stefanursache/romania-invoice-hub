@@ -184,26 +184,33 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Filter navigation items based on user role
   const getNavItems = () => {
+    // Accountants only see My Companies and Settings in sidebar
+    if (userRole === "accountant") {
+      return [
+        { 
+          href: "/accountant-dashboard", 
+          icon: Home, 
+          label: t('nav.myCompanies')
+        },
+        { 
+          href: "/settings", 
+          icon: Settings, 
+          label: t('nav.settings')
+        },
+      ];
+    }
+
+    // Business owners see full navigation
     const baseItems = [
-      { 
-        href: userRole === "accountant" ? "/accountant-dashboard" : "/dashboard", 
-        icon: LayoutDashboard, 
-        label: userRole === "accountant" ? t('nav.myCompanies') : t('nav.dashboard')
-      },
+      { href: "/dashboard", icon: LayoutDashboard, label: t('nav.dashboard') },
       { href: "/clients", icon: Users, label: t('nav.clients') },
       { href: "/invoices", icon: FileText, label: t('nav.invoices') },
       { href: "/expenses", icon: Receipt, label: t('nav.expenses') },
       { href: "/chart-of-accounts", icon: BookOpen, label: t('nav.chartOfAccounts') },
       { href: "/reports", icon: FileBarChart, label: t('nav.reports') },
+      { href: "/team", icon: Users, label: t('nav.team') },
+      { href: "/settings", icon: Settings, label: t('nav.settings') },
     ];
-
-    // Only show Team for business owners (not accountants)
-    if (userRole !== "accountant") {
-      baseItems.push({ href: "/team", icon: Users, label: t('nav.team') });
-    }
-
-    // Settings always shown (for personal account settings)
-    baseItems.push({ href: "/settings", icon: Settings, label: t('nav.settings') });
 
     return baseItems;
   };

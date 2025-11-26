@@ -116,8 +116,8 @@ export default function Team() {
       // First, check if user exists with this email
       const { data: userData, error: userError } = await supabase
         .from("profiles")
-        .select("id")
-        .eq("id", email)
+        .select("id, email, company_name")
+        .eq("email", email)
         .maybeSingle();
 
       if (userError) throw userError;
@@ -126,7 +126,7 @@ export default function Team() {
         toast({
           variant: "destructive",
           title: "User not found",
-          description: "No user exists with this email. They need to sign up first.",
+          description: "No accountant exists with this email. They need to sign up first with an accountant account.",
         });
         return;
       }
@@ -155,7 +155,7 @@ export default function Team() {
 
       toast({
         title: "Success",
-        description: "Accountant invited successfully!",
+        description: `${userData.company_name || userData.email} has been added to your team!`,
       });
 
       setEmail("");
@@ -224,7 +224,7 @@ export default function Team() {
               Invite Accountant
             </CardTitle>
             <CardDescription>
-              Add an accountant to give them read-only access to your invoices, clients, and financial data.
+              Enter the email address of an accountant who already has an account. They'll get immediate read-only access to your data.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -236,9 +236,11 @@ export default function Team() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="flex-1"
+                disabled={inviting}
               />
-              <Button type="submit" disabled={inviting}>
-                {inviting ? "Inviting..." : "Send Invite"}
+              <Button type="submit" disabled={inviting || !email.trim()}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                {inviting ? "Adding..." : "Add Accountant"}
               </Button>
             </form>
           </CardContent>

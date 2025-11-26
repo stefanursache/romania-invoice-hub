@@ -411,6 +411,81 @@ export type Database = {
           },
         ]
       }
+      payment_gateway_config: {
+        Row: {
+          api_key_encrypted: string | null
+          created_at: string | null
+          gateway_name: string
+          id: string
+          is_active: boolean | null
+          publishable_key: string | null
+          updated_at: string | null
+          webhook_secret: string | null
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          created_at?: string | null
+          gateway_name?: string
+          id?: string
+          is_active?: boolean | null
+          publishable_key?: string | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          created_at?: string | null
+          gateway_name?: string
+          id?: string
+          is_active?: boolean | null
+          publishable_key?: string | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          payment_method: string | null
+          status: string
+          stripe_payment_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string | null
+          status: string
+          stripe_payment_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string | null
+          status?: string
+          stripe_payment_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -581,6 +656,48 @@ export type Database = {
           ip_address?: unknown
           last_activity?: string | null
           user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_name: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_name: string
+          status: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_name?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []

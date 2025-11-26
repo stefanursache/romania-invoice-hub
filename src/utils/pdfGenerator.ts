@@ -45,184 +45,245 @@ export const generateInvoicePDF = (
 ) => {
   const doc = new jsPDF();
 
-  // Colors
-  const primaryColor: [number, number, number] = [37, 99, 235]; // Blue
-  const accentColor: [number, number, number] = [16, 185, 129]; // Green
-  const textColor: [number, number, number] = [31, 41, 55]; // Dark gray
+  // Modern color palette
+  const primaryColor: [number, number, number] = [30, 64, 175]; // Deep blue
+  const secondaryColor: [number, number, number] = [241, 245, 249]; // Light gray
+  const accentColor: [number, number, number] = [59, 130, 246]; // Bright blue
+  const textDark: [number, number, number] = [15, 23, 42]; // Very dark
+  const textGray: [number, number, number] = [100, 116, 139]; // Medium gray
 
-  // Header
+  // Header with gradient effect
   doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 40, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(28);
-  doc.setFont("helvetica", "bold");
+  doc.rect(0, 0, 210, 50, "F");
   
-  // Show PRO FORMA or FACTURĂ based on invoice type
-  const documentTitle = invoice.invoice_type === "proforma" ? "PRO FORMA" : "FACTURĂ";
-  doc.text(documentTitle, 15, 20);
+  // White text for header
+  doc.setTextColor(255, 255, 255);
+  
+  // Document title
+  const documentTitle = invoice.invoice_type === "proforma" ? "PRO FORMA" : "FACTURA";
+  doc.setFontSize(32);
+  doc.setFont("helvetica", "bold");
+  doc.text(documentTitle, 20, 25);
 
-  doc.setFontSize(14);
+  // Invoice number
+  doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text(`Nr. ${invoice.invoice_number}`, 15, 30);
+  doc.text(`Numar: ${invoice.invoice_number}`, 20, 35);
 
-  // Company info (right side of header)
-  doc.setFontSize(10);
-  doc.text(company.company_name, 210 - 15, 15, { align: "right" });
+  // Company info (right side)
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(company.company_name, 190, 20, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  
+  let headerY = 26;
   if (company.cui_cif) {
-    doc.text(`CUI: ${company.cui_cif}`, 210 - 15, 21, { align: "right" });
+    doc.text(`CUI: ${company.cui_cif}`, 190, headerY, { align: "right" });
+    headerY += 5;
   }
   if (company.reg_com) {
-    doc.text(`Reg. Com.: ${company.reg_com}`, 210 - 15, 27, { align: "right" });
+    doc.text(`Reg. Com.: ${company.reg_com}`, 190, headerY, { align: "right" });
   }
 
-  // Reset text color
-  doc.setTextColor(...textColor);
+  // Reset to dark text
+  doc.setTextColor(...textDark);
 
-  // Company and Client info boxes
-  const startY = 50;
+  // Info boxes with better spacing
+  const startY = 65;
 
-  // Company details box
-  doc.setFillColor(248, 250, 252);
-  doc.rect(15, startY, 85, 40, "F");
-  doc.setDrawColor(226, 232, 240);
-  doc.rect(15, startY, 85, 40, "S");
-
-  doc.setFontSize(10);
+  // Supplier box
+  doc.setFillColor(...secondaryColor);
+  doc.roundedRect(20, startY, 80, 48, 2, 2, "F");
+  
+  doc.setTextColor(...textGray);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Furnizor:", 20, startY + 8);
+  doc.text("FURNIZOR", 25, startY + 8);
+  
+  doc.setTextColor(...textDark);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(company.company_name, 25, startY + 16);
+  
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-
-  let yPos = startY + 14;
-  doc.text(company.company_name, 20, yPos);
-  yPos += 5;
+  let yPos = startY + 22;
+  
+  if (company.cui_cif) {
+    doc.text(`CUI: ${company.cui_cif}`, 25, yPos);
+    yPos += 5;
+  }
+  if (company.reg_com) {
+    doc.text(`Reg. Com: ${company.reg_com}`, 25, yPos);
+    yPos += 5;
+  }
   if (company.address) {
     const addressLines = doc.splitTextToSize(company.address, 70);
-    doc.text(addressLines, 20, yPos);
+    doc.text(addressLines, 25, yPos);
     yPos += addressLines.length * 5;
   }
-  if (company.bank_account) {
-    doc.text(`IBAN: ${company.bank_account}`, 20, yPos);
+  if (company.bank_account && yPos < startY + 45) {
+    doc.text(`IBAN: ${company.bank_account}`, 25, yPos);
   }
 
-  // Client details box
-  doc.setFillColor(248, 250, 252);
-  doc.rect(110, startY, 85, 40, "F");
-  doc.setDrawColor(226, 232, 240);
-  doc.rect(110, startY, 85, 40, "S");
-
-  doc.setFontSize(10);
+  // Client box
+  doc.setFillColor(...secondaryColor);
+  doc.roundedRect(110, startY, 80, 48, 2, 2, "F");
+  
+  doc.setTextColor(...textGray);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Client:", 115, startY + 8);
+  doc.text("CLIENT", 115, startY + 8);
+  
+  doc.setTextColor(...textDark);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(invoice.client.name, 115, startY + 16);
+  
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-
-  yPos = startY + 14;
-  doc.text(invoice.client.name, 115, yPos);
-  yPos += 5;
+  yPos = startY + 22;
+  
   if (invoice.client.cui_cif) {
     doc.text(`CUI: ${invoice.client.cui_cif}`, 115, yPos);
+    yPos += 5;
+  }
+  if (invoice.client.reg_com) {
+    doc.text(`Reg. Com: ${invoice.client.reg_com}`, 115, yPos);
     yPos += 5;
   }
   if (invoice.client.address) {
     const clientAddressLines = doc.splitTextToSize(invoice.client.address, 70);
     doc.text(clientAddressLines, 115, yPos);
-    yPos += clientAddressLines.length * 5;
   }
 
-  // Invoice details
-  const detailsY = startY + 45;
+  // Invoice metadata
+  const metaY = startY + 55;
+  doc.setFillColor(255, 255, 255);
+  doc.setTextColor(...textGray);
   doc.setFontSize(9);
-  doc.text(`Data emiterii: ${new Date(invoice.issue_date).toLocaleDateString("ro-RO")}`, 15, detailsY);
-  doc.text(`Scadență: ${new Date(invoice.due_date).toLocaleDateString("ro-RO")}`, 15, detailsY + 6);
-  doc.text(`Monedă: ${invoice.currency}`, 15, detailsY + 12);
+  doc.setFont("helvetica", "normal");
+  
+  doc.text("Data emiterii:", 20, metaY);
+  doc.setTextColor(...textDark);
+  doc.text(new Date(invoice.issue_date).toLocaleDateString("ro-RO"), 50, metaY);
+  
+  doc.setTextColor(...textGray);
+  doc.text("Scadenta:", 90, metaY);
+  doc.setTextColor(...textDark);
+  doc.text(new Date(invoice.due_date).toLocaleDateString("ro-RO"), 115, metaY);
+  
+  doc.setTextColor(...textGray);
+  doc.text("Moneda:", 160, metaY);
+  doc.setTextColor(...textDark);
+  doc.text(invoice.currency, 180, metaY);
 
-  // Items table
-  const tableStartY = detailsY + 20;
+  // Items table with better styling
+  const tableStartY = metaY + 15;
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [["Descriere", "Cant.", "Preț unitar", "TVA %", "Subtotal", "TVA", "Total"]],
+    head: [["Descriere", "Cant.", "Pret unitar", "TVA %", "Subtotal", "TVA", "Total"]],
     body: invoice.items.map((item) => [
       item.description,
       item.quantity.toFixed(2),
-      item.unit_price.toFixed(2),
+      `${item.unit_price.toFixed(2)} ${invoice.currency}`,
       `${item.vat_rate}%`,
-      item.subtotal.toFixed(2),
-      item.vat_amount.toFixed(2),
-      item.total.toFixed(2),
+      `${item.subtotal.toFixed(2)} ${invoice.currency}`,
+      `${item.vat_amount.toFixed(2)} ${invoice.currency}`,
+      `${item.total.toFixed(2)} ${invoice.currency}`,
     ]),
     headStyles: {
       fillColor: primaryColor,
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 9,
+      fontSize: 10,
+      cellPadding: 8,
     },
     bodyStyles: {
-      fontSize: 9,
-      textColor: textColor,
+      fontSize: 10,
+      textColor: textDark,
+      cellPadding: 8,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.5,
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252],
+      fillColor: secondaryColor,
     },
     columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 20, halign: "right" },
-      2: { cellWidth: 25, halign: "right" },
-      3: { cellWidth: 20, halign: "center" },
+      0: { cellWidth: 65 },
+      1: { cellWidth: 18, halign: "center" },
+      2: { cellWidth: 28, halign: "right" },
+      3: { cellWidth: 18, halign: "center" },
       4: { cellWidth: 25, halign: "right" },
       5: { cellWidth: 20, halign: "right" },
-      6: { cellWidth: 25, halign: "right" },
+      6: { cellWidth: 25, halign: "right", fontStyle: "bold" },
     },
-    margin: { left: 15, right: 15 },
+    margin: { left: 20, right: 20 },
   });
 
-  // Totals
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  // Totals section with modern design
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
 
-  doc.setFillColor(248, 250, 252);
-  doc.rect(130, finalY, 65, 25, "F");
-  doc.setDrawColor(226, 232, 240);
-  doc.rect(130, finalY, 65, 25, "S");
-
+  // Summary box
+  doc.setFillColor(...secondaryColor);
+  doc.roundedRect(125, finalY, 65, 32, 2, 2, "F");
+  
+  doc.setTextColor(...textGray);
   doc.setFontSize(10);
-  doc.text("Subtotal:", 135, finalY + 7);
-  doc.text(`${invoice.subtotal.toFixed(2)} ${invoice.currency}`, 190, finalY + 7, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  
+  doc.text("Subtotal:", 130, finalY + 8);
+  doc.setTextColor(...textDark);
+  doc.text(`${invoice.subtotal.toFixed(2)} ${invoice.currency}`, 185, finalY + 8, { align: "right" });
 
-  doc.text("TVA:", 135, finalY + 14);
-  doc.text(`${invoice.vat_amount.toFixed(2)} ${invoice.currency}`, 190, finalY + 14, { align: "right" });
+  doc.setTextColor(...textGray);
+  doc.text("TVA:", 130, finalY + 16);
+  doc.setTextColor(...textDark);
+  doc.text(`${invoice.vat_amount.toFixed(2)} ${invoice.currency}`, 185, finalY + 16, { align: "right" });
 
+  // Total with accent
+  doc.setFillColor(...accentColor);
+  doc.roundedRect(125, finalY + 21, 65, 10, 2, 2, "F");
+  
+  doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("TOTAL:", 135, finalY + 22);
-  doc.text(`${invoice.total.toFixed(2)} ${invoice.currency}`, 190, finalY + 22, { align: "right" });
+  doc.text("TOTAL:", 130, finalY + 28);
+  doc.text(`${invoice.total.toFixed(2)} ${invoice.currency}`, 185, finalY + 28, { align: "right" });
 
-  // Notes
+  // Notes section
   if (invoice.notes) {
-    const notesY = finalY + 35;
+    const notesY = finalY + 40;
+    doc.setFillColor(255, 255, 255);
+    doc.setTextColor(...textGray);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("Note:", 15, notesY);
+    doc.setFontSize(9);
+    doc.text("NOTE:", 20, notesY);
+    
+    doc.setTextColor(...textDark);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    const notesLines = doc.splitTextToSize(invoice.notes, 180);
-    doc.text(notesLines, 15, notesY + 6);
+    const notesLines = doc.splitTextToSize(invoice.notes, 170);
+    doc.text(notesLines, 20, notesY + 6);
   }
 
   // Footer
   const pageHeight = doc.internal.pageSize.height;
-  doc.setFillColor(...accentColor);
-  doc.rect(0, pageHeight - 15, 210, 15, "F");
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, pageHeight - 20, 210, 20, "F");
+  
   doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("Multumim pentru incredere!", 105, pageHeight - 11, { align: "center" });
+  
   doc.setFontSize(8);
-  doc.text(
-    "Mulțumim pentru încredere! | SmartInvoice Romania",
-    105,
-    pageHeight - 7,
-    { align: "center" }
-  );
+  doc.setTextColor(200, 210, 230);
+  doc.text("SmartInvoice Romania", 105, pageHeight - 6, { align: "center" });
 
-  // Save
-  doc.save(`Factura-${invoice.invoice_number}.pdf`);
+  // Save with appropriate filename
+  const filePrefix = invoice.invoice_type === "proforma" ? "Proforma" : "Factura";
+  doc.save(`${filePrefix}-${invoice.invoice_number}.pdf`);
 };

@@ -132,9 +132,8 @@ const AccountantDashboard = () => {
   };
 
   const handleAccessWorkspace = (workspaceOwnerId: string) => {
-    // Store the workspace owner ID in session storage
-    sessionStorage.setItem("active_workspace_owner", workspaceOwnerId);
-    navigate("/dashboard");
+    // Navigate to dedicated company view
+    navigate(`/company/${workspaceOwnerId}`);
   };
 
   const filteredWorkspaces = workspaces.filter(workspace =>

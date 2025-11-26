@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import Expenses from "./pages/Expenses";
+import CompanyView from "./pages/CompanyView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/accountant-dashboard" element={<AccountantDashboard />} />
+          <Route path="/company/:companyId" element={<CompanyView />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/new" element={<InvoiceForm />} />

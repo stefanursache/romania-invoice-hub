@@ -52,6 +52,7 @@ const InvoiceForm = () => {
     due_date: "",
     currency: "RON",
     notes: "",
+    invoice_type: "invoice" as "invoice" | "proforma",
   });
   const [newClientData, setNewClientData] = useState<NewClientData>({
     name: "",
@@ -170,6 +171,7 @@ const InvoiceForm = () => {
       due_date: invoice.due_date,
       currency: invoice.currency,
       notes: invoice.notes || "",
+      invoice_type: (invoice.invoice_type as "invoice" | "proforma") || "invoice",
     });
 
     setLoading(false);
@@ -432,9 +434,27 @@ const InvoiceForm = () => {
             <CardTitle>Informații generale</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="invoice_number">Număr factură *</Label>
+                <Label htmlFor="invoice_type">Tip document *</Label>
+                <Select
+                  value={formData.invoice_type}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, invoice_type: value as "invoice" | "proforma" })
+                  }
+                >
+                  <SelectTrigger id="invoice_type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="invoice">Factură fiscală</SelectItem>
+                    <SelectItem value="proforma">Proformă</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="invoice_number">Număr {formData.invoice_type === "proforma" ? "proformă" : "factură"} *</Label>
                 <Input
                   id="invoice_number"
                   value={formData.invoice_number}

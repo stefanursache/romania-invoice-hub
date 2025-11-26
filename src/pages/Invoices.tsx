@@ -22,6 +22,7 @@ interface Invoice {
   vat_amount: number;
   total: number;
   currency: string;
+  invoice_type: string;
   clients: {
     name: string;
   };
@@ -226,6 +227,7 @@ const Invoices = () => {
 
   const handleExportCSV = () => {
     const exportData = invoices.map((invoice) => ({
+      invoice_type: invoice.invoice_type === "proforma" ? "Pro Forma" : "Factură Fiscală",
       invoice_number: invoice.invoice_number,
       issue_date: invoice.issue_date,
       due_date: invoice.due_date,
@@ -307,9 +309,16 @@ const Invoices = () => {
               <Card key={invoice.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">
-                      Factură #{invoice.invoice_number}
-                    </CardTitle>
+                    <div className="flex items-center gap-3">
+                      <CardTitle className="text-xl">
+                        {invoice.invoice_type === "proforma" ? "Proformă" : "Factură"} #{invoice.invoice_number}
+                      </CardTitle>
+                      {invoice.invoice_type === "proforma" && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                          PRO FORMA
+                        </Badge>
+                      )}
+                    </div>
                     <Badge className={getStatusColor(invoice.status)}>
                       {getStatusLabel(invoice.status)}
                     </Badge>

@@ -451,8 +451,10 @@ export type Database = {
           currency: string | null
           description: string | null
           id: string
+          last_retry_at: string | null
           metadata: Json | null
           payment_method: string | null
+          retry_available: boolean | null
           status: string
           stripe_payment_id: string | null
           updated_at: string | null
@@ -464,8 +466,10 @@ export type Database = {
           currency?: string | null
           description?: string | null
           id?: string
+          last_retry_at?: string | null
           metadata?: Json | null
           payment_method?: string | null
+          retry_available?: boolean | null
           status: string
           stripe_payment_id?: string | null
           updated_at?: string | null
@@ -477,8 +481,10 @@ export type Database = {
           currency?: string | null
           description?: string | null
           id?: string
+          last_retry_at?: string | null
           metadata?: Json | null
           payment_method?: string | null
+          retry_available?: boolean | null
           status?: string
           stripe_payment_id?: string | null
           updated_at?: string | null
@@ -699,6 +705,42 @@ export type Database = {
           stripe_subscription_id?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          event_data: Json
+          event_id: string
+          event_type: string
+          id: string
+          processed_at: string | null
+          retry_count: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          event_data: Json
+          event_id: string
+          event_type: string
+          id?: string
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          event_data?: Json
+          event_id?: string
+          event_type?: string
+          id?: string
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: string
         }
         Relationships: []
       }

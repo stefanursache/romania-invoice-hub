@@ -59,6 +59,20 @@ serve(async (req) => {
 
     console.log('Webhook event type:', event.type);
 
+    // Log webhook event to database
+    const { error: logError } = await supabaseAdmin
+      .from('webhook_events')
+      .insert({
+        event_id: event.id,
+        event_type: event.type,
+        event_data: event.data.object,
+        status: 'processed',
+      });
+
+    if (logError) {
+      console.error('Error logging webhook event:', logError);
+    }
+
     // Handle different event types
     switch (event.type) {
       case 'checkout.session.completed': {

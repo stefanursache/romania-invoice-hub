@@ -50,6 +50,9 @@ interface Expense {
   vat_amount: number;
   currency: string;
   status: string;
+  description: string | null;
+  notes: string | null;
+  image_url: string | null;
 }
 
 interface SaftExport {
@@ -86,6 +89,11 @@ const CompanyView = () => {
   const [efacturaPreviewOpen, setEfacturaPreviewOpen] = useState(false);
   const [efacturaXmlContent, setEfacturaXmlContent] = useState("");
   const [efacturaFilename, setEfacturaFilename] = useState("");
+  const [invoicePreviewOpen, setInvoicePreviewOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
+  const [expensePreviewOpen, setExpensePreviewOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
 
   useEffect(() => {
     checkAccess();
@@ -306,6 +314,31 @@ const CompanyView = () => {
     
     toast.success("e-Factura downloaded successfully!");
     setEfacturaPreviewOpen(false);
+  };
+
+  const handlePreviewInvoice = async (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    
+    // Fetch invoice items
+    const { data: items, error } = await supabase
+      .from("invoice_items")
+      .select("*")
+      .eq("invoice_id", invoice.id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error loading invoice items:", error);
+      toast.error("Failed to load invoice details");
+      return;
+    }
+
+    setInvoiceItems(items || []);
+    setInvoicePreviewOpen(true);
+  };
+
+  const handlePreviewExpense = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setExpensePreviewOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -541,24 +574,33 @@ const CompanyView = () => {
                             {invoice.total.toFixed(2)} {invoice.currency}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleGenerateEfactura(invoice.id)}
-                              disabled={generatingEfactura && selectedInvoiceForEfactura === invoice.id}
-                            >
-                              {generatingEfactura && selectedInvoiceForEfactura === invoice.id ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                                  e-Factura
-                                </>
-                              )}
-                            </Button>
+                            <div className="flex items-center gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handlePreviewInvoice(invoice)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleGenerateEfactura(invoice.id)}
+                                disabled={generatingEfactura && selectedInvoiceForEfactura === invoice.id}
+                              >
+                                {generatingEfactura && selectedInvoiceForEfactura === invoice.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                    e-Factura
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -593,6 +635,7 @@ const CompanyView = () => {
                         <TableHead className="text-right">Amount</TableHead>
                         <TableHead className="text-right">VAT</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -613,6 +656,15 @@ const CompanyView = () => {
                             <Badge className={getStatusColor(expense.status)}>
                               {expense.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handlePreviewExpense(expense)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -785,6 +837,189 @@ const CompanyView = () => {
               <Button onClick={handleDownloadEfactura}>
                 <Download className="h-4 w-4 mr-2" />
                 Download XML
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Invoice Preview Dialog */}
+        <Dialog open={invoicePreviewOpen} onOpenChange={setInvoicePreviewOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Invoice Details</DialogTitle>
+              <DialogDescription>
+                Complete invoice information
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="h-[500px] w-full">
+              {selectedInvoice && (
+                <div className="space-y-6 p-4">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Invoice Number</p>
+                        <p className="text-lg font-semibold">{selectedInvoice.invoice_number}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Client</p>
+                        <p className="text-lg">{selectedInvoice.clients?.name || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Status</p>
+                        <Badge className={getStatusColor(selectedInvoice.status)}>
+                          {selectedInvoice.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Issue Date</p>
+                        <p className="text-lg">{format(new Date(selectedInvoice.issue_date), "dd MMM yyyy")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Due Date</p>
+                        <p className="text-lg">{format(new Date(selectedInvoice.due_date), "dd MMM yyyy")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Currency</p>
+                        <p className="text-lg">{selectedInvoice.currency}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Invoice Items</p>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          <TableHead className="text-right">Unit Price</TableHead>
+                          <TableHead className="text-right">VAT %</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {invoiceItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.description}</TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
+                            <TableCell className="text-right">{Number(item.unit_price).toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{item.vat_rate}%</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {Number(item.total).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <div className="space-y-2 max-w-xs ml-auto">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal:</span>
+                        <span className="font-medium">{selectedInvoice.total.toFixed(2)} {selectedInvoice.currency}</span>
+                      </div>
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total:</span>
+                        <span>{selectedInvoice.total.toFixed(2)} {selectedInvoice.currency}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </ScrollArea>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInvoicePreviewOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Expense Preview Dialog */}
+        <Dialog open={expensePreviewOpen} onOpenChange={setExpensePreviewOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Expense Details</DialogTitle>
+              <DialogDescription>
+                Complete expense information
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="h-[500px] w-full">
+              {selectedExpense && (
+                <div className="space-y-6 p-4">
+                  {selectedExpense.image_url && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <img 
+                        src={selectedExpense.image_url} 
+                        alt="Expense receipt" 
+                        className="w-full h-auto"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Merchant</p>
+                        <p className="text-lg font-semibold">{selectedExpense.merchant}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Category</p>
+                        <Badge variant="outline">{selectedExpense.category}</Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Date</p>
+                        <p className="text-lg">{format(new Date(selectedExpense.expense_date), "dd MMM yyyy")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Status</p>
+                        <Badge className={getStatusColor(selectedExpense.status)}>
+                          {selectedExpense.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Amount</p>
+                        <p className="text-2xl font-bold">
+                          {Number(selectedExpense.amount).toFixed(2)} {selectedExpense.currency}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">VAT Amount</p>
+                        <p className="text-lg">
+                          {Number(selectedExpense.vat_amount).toFixed(2)} {selectedExpense.currency}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Currency</p>
+                        <p className="text-lg">{selectedExpense.currency}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedExpense.description && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
+                      <p className="text-base">{selectedExpense.description}</p>
+                    </div>
+                  )}
+
+                  {selectedExpense.notes && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Notes</p>
+                      <p className="text-base">{selectedExpense.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setExpensePreviewOpen(false)}>
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>

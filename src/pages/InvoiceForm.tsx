@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Trash2, Loader2, Save, Send, UserPlus } from "lucide-react";
+import { Plus, Trash2, Loader2, Save, Check, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Client {
@@ -403,7 +403,7 @@ const InvoiceForm = () => {
       }
 
       toast.success(
-        status === "draft" ? "Factură salvată ca ciornă" : "Factură trimisă!"
+        status === "draft" ? "Factură salvată ca ciornă" : "Factură finalizată!"
       );
       navigate("/invoices");
     } catch (error: any) {
@@ -804,9 +804,9 @@ const InvoiceForm = () => {
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <Send className="h-4 w-4 mr-2" />
+              <Check className="h-4 w-4 mr-2" />
             )}
-            Finalizează și trimite
+            Finalizează
           </Button>
         </div>
       </div>

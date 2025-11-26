@@ -39,7 +39,8 @@ import {
   ChevronDown,
   Check,
   Home,
-  Landmark
+  Landmark,
+  Package
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -195,6 +196,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       { href: "/clients", icon: Users, label: t('nav.clients') },
       { href: "/invoices", icon: FileText, label: t('nav.invoices') },
       { href: "/expenses", icon: Receipt, label: t('nav.expenses') },
+      { href: "/inventory", icon: Package, label: t('nav.inventory') },
       { href: "/bank-statements", icon: Landmark, label: t('nav.bankStatements') },
       { href: "/chart-of-accounts", icon: BookOpen, label: t('nav.chartOfAccounts') },
       { href: "/reports", icon: FileBarChart, label: t('nav.reports') },

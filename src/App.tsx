@@ -27,6 +27,7 @@ import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import Inventory from "./pages/Inventory";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/chart-of-accounts" element={<ChartOfAccounts />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/bank-statements" element={<BankStatements />} />
+          <Route path="/inventory" element={<Inventory />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/gdpr" element={<GDPR />} />

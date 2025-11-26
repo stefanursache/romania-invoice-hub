@@ -75,7 +75,7 @@ const Settings = () => {
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
     
     setUserRole(roleData?.role || null);
 
@@ -83,7 +83,7 @@ const Settings = () => {
       .from("profiles")
       .select("*")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       toast.error("Eroare la încărcarea profilului");

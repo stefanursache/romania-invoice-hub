@@ -49,14 +49,23 @@ export default function AccountantAccessRequest() {
 
     setRequesting(true);
     try {
+      console.log("AccountantAccessRequest: Sending request to:", email.trim());
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      console.log("AccountantAccessRequest: Looking up business owner");
+      
       // Check if business owner exists using secure function
       const { data: ownerData, error: ownerError } = await supabase
         .rpc("get_business_user_by_email", { user_email: email.trim() });
 
-      if (ownerError) throw ownerError;
+      console.log("AccountantAccessRequest: Business owner lookup result:", ownerData);
+
+      if (ownerError) {
+        console.error("AccountantAccessRequest: Lookup error:", ownerError);
+        throw ownerError;
+      }
 
       if (!ownerData || ownerData.length === 0) {
         toast({

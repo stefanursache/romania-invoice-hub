@@ -690,6 +690,39 @@ export type Database = {
         }
         Relationships: []
       }
+      startup_discount_overrides: {
+        Row: {
+          approved_by: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_eligible: boolean
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_by: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_eligible?: boolean
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_by?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_eligible?: boolean
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       stock_movements: {
         Row: {
           created_at: string
@@ -928,6 +961,15 @@ export type Database = {
           company_name: string
           country: string
           id: string
+        }[]
+      }
+      get_startup_discount_eligibility: {
+        Args: { _user_id: string }
+        Returns: {
+          eligibility_type: string
+          is_eligible: boolean
+          months_remaining: number
+          notes: string
         }[]
       }
       get_user_role: { Args: { _user_id: string }; Returns: string }

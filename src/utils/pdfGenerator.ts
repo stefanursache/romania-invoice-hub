@@ -1,6 +1,21 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// Remove Romanian diacritics for PDF compatibility
+const removeDiacritics = (text: string): string => {
+  return text
+    .replace(/ă/g, 'a')
+    .replace(/â/g, 'a')
+    .replace(/î/g, 'i')
+    .replace(/ș/g, 's')
+    .replace(/ț/g, 't')
+    .replace(/Ă/g, 'A')
+    .replace(/Â/g, 'A')
+    .replace(/Î/g, 'I')
+    .replace(/Ș/g, 'S')
+    .replace(/Ț/g, 'T');
+};
+
 interface InvoiceData {
   invoice_number: string;
   issue_date: string;
@@ -74,7 +89,7 @@ export const generateInvoicePDF = (
   // Company name (right aligned)
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(company.company_name, 195, 20, { align: "right" });
+  doc.text(removeDiacritics(company.company_name), 195, 20, { align: "right" });
 
   // Reset text color for body
   doc.setTextColor(...textDark);
@@ -96,7 +111,7 @@ export const generateInvoicePDF = (
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...textDark);
-  doc.text(company.company_name, 20, boxY + 16);
+  doc.text(removeDiacritics(company.company_name), 20, boxY + 16);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -111,7 +126,7 @@ export const generateInvoicePDF = (
     yPos += 6;
   }
   if (company.address && yPos < boxY + boxHeight - 4) {
-    const addressLines = doc.splitTextToSize(company.address, 75);
+    const addressLines = doc.splitTextToSize(removeDiacritics(company.address), 75);
     doc.text(addressLines, 20, yPos);
   }
 
@@ -126,7 +141,7 @@ export const generateInvoicePDF = (
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...textDark);
-  doc.text(invoice.client.name || "N/A", 115, boxY + 16);
+  doc.text(removeDiacritics(invoice.client.name || "N/A"), 115, boxY + 16);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -141,7 +156,7 @@ export const generateInvoicePDF = (
     yPos += 6;
   }
   if (invoice.client.address && yPos < boxY + boxHeight - 4) {
-    const clientAddressLines = doc.splitTextToSize(invoice.client.address, 75);
+    const clientAddressLines = doc.splitTextToSize(removeDiacritics(invoice.client.address), 75);
     doc.text(clientAddressLines, 115, yPos);
   }
 
@@ -170,9 +185,9 @@ export const generateInvoicePDF = (
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [["Descriere", "Cant.", "Preț unitar", "TVA", "Subtotal", "TVA", "Total"]],
+    head: [["Descriere", "Cant.", "Pret unitar", "TVA", "Subtotal", "TVA", "Total"]],
     body: invoice.items.map((item) => [
-      item.description,
+      removeDiacritics(item.description),
       item.quantity.toString(),
       `${item.unit_price.toFixed(2)} ${invoice.currency}`,
       `${item.vat_rate}%`,
@@ -265,11 +280,11 @@ export const generateInvoicePDF = (
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(...textDark);
-    doc.text("OBSERVAȚII:", 15, notesY);
+    doc.text("OBSERVATII:", 15, notesY);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const notesLines = doc.splitTextToSize(invoice.notes, 180);
+    const notesLines = doc.splitTextToSize(removeDiacritics(invoice.notes), 180);
     doc.text(notesLines, 15, notesY + 7);
   }
 
@@ -282,7 +297,7 @@ export const generateInvoicePDF = (
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...textDark);
-  doc.text("Mulțumim pentru încredere!", 105, pageHeight - 12, { align: "center" });
+  doc.text("Multumim pentru incredere!", 105, pageHeight - 12, { align: "center" });
   
   doc.setFontSize(9);
   doc.setTextColor(...textMedium);

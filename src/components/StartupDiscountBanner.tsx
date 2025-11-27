@@ -3,20 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { differenceInMonths, parseISO } from "date-fns";
+import { Sparkles, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-interface Profile {
-  created_at: string;
-  payment_plan: string | null;
+interface DiscountStatus {
+  is_eligible: boolean;
+  eligibility_type: string;
+  months_remaining: number;
+  notes: string | null;
 }
 
 export function StartupDiscountBanner() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isEligible, setIsEligible] = useState<boolean | null>(null);
-  const [monthsSinceCreation, setMonthsSinceCreation] = useState<number>(0);
+  const [discountStatus, setDiscountStatus] = useState<DiscountStatus | null>(null);
 
   useEffect(() => {
     checkEligibility();
@@ -27,25 +27,14 @@ export function StartupDiscountBanner() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profileData, error } = await supabase
-        .from("profiles")
-        .select("created_at, payment_plan")
-        .eq("id", user.id)
-        .single();
+      const { data, error } = await supabase.rpc("get_startup_discount_eligibility", {
+        _user_id: user.id,
+      });
 
       if (error) throw error;
 
-      if (profileData) {
-        setProfile(profileData);
-        
-        // Check if company was created within the last 12 months
-        const createdAt = parseISO(profileData.created_at);
-        const monthsDiff = differenceInMonths(new Date(), createdAt);
-        setMonthsSinceCreation(monthsDiff);
-        
-        // Eligible if created less than 12 months ago
-        const eligible = monthsDiff <= 12;
-        setIsEligible(eligible);
+      if (data && data.length > 0) {
+        setDiscountStatus(data[0]);
       }
     } catch (error) {
       console.error("Error checking startup discount eligibility:", error);
@@ -54,39 +43,41 @@ export function StartupDiscountBanner() {
     }
   };
 
-  if (loading || !profile) return null;
-
-  // Don't show banner for free plan users
-  if (profile.payment_plan === "free") return null;
-
-  if (isEligible) {
-    const monthsRemaining = Math.max(0, 12 - monthsSinceCreation);
-    
+  if (loading || !discountStatus) return null;
+  if (discountStatus.is_eligible && discountStatus.eligibility_type !== "expired_override") {
     return (
       <Alert className="border-green-500/50 bg-green-50 dark:bg-green-950/30">
         <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
         <AlertTitle className="text-green-900 dark:text-green-100 flex items-center gap-2">
           <Sparkles className="h-4 w-4" />
-          Ești eligibil pentru Reducerea Start-up!
+          {discountStatus.eligibility_type === "manual_override" 
+            ? "Reducere Start-up Aprobată Manual!" 
+            : "Ești eligibil pentru Reducerea Start-up!"}
           <Badge variant="default" className="bg-green-600">
-            {monthsRemaining} {monthsRemaining === 1 ? "lună" : "luni"} rămase
+            {discountStatus.months_remaining < 999 
+              ? `${discountStatus.months_remaining} ${discountStatus.months_remaining === 1 ? "lună" : "luni"} rămase`
+              : "Nelimitat"}
           </Badge>
         </AlertTitle>
         <AlertDescription className="text-green-800 dark:text-green-200">
           <p className="mb-2">
-            🎉 <strong>Felicitări!</strong> Compania ta a fost înființată în ultimele 12 luni, 
-            deci beneficiezi de <strong>50% reducere</strong> la abonament.
+            🎉 <strong>Felicitări!</strong> Beneficiezi de <strong>50% reducere</strong> la abonament.
+            {discountStatus.eligibility_type === "manual_override" && " (Aprobat manual de administrator)"}
           </p>
+          {discountStatus.notes && (
+            <p className="text-sm mb-2 italic">
+              Note: {discountStatus.notes}
+            </p>
+          )}
           <p className="text-sm">
-            Reducerea se aplică automat pentru primele {monthsRemaining} {monthsRemaining === 1 ? "lună" : "luni"} 
-            și va fi vizibilă în factura ta.
+            Reducerea se aplică automat și va fi vizibilă în factura ta.
           </p>
         </AlertDescription>
       </Alert>
     );
   }
 
-  if (isEligible === false && monthsSinceCreation > 12 && monthsSinceCreation <= 14) {
+  if (discountStatus.eligibility_type === "expired_override") {
     return (
       <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/30">
         <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -94,8 +85,11 @@ export function StartupDiscountBanner() {
           Reducerea Start-up a expirat
         </AlertTitle>
         <AlertDescription className="text-amber-800 dark:text-amber-200">
-          Perioada de 12 luni cu reducere de 50% pentru start-up-uri s-a încheiat. 
+          Perioada cu reducere de 50% pentru start-up-uri s-a încheiat. 
           Prețul abonamentului va reveni la valoarea standard începând cu următoarea factură.
+          {discountStatus.notes && (
+            <p className="text-sm mt-1 italic">Note: {discountStatus.notes}</p>
+          )}
         </AlertDescription>
       </Alert>
     );

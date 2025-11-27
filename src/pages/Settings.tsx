@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Building2, KeyRound, User, Cloud, CreditCard, ArrowLeft } from "lucide-react";
+import { Loader2, Building2, KeyRound, User, Cloud, CreditCard, ArrowLeft, Crown } from "lucide-react";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
+import { PlanFeaturesWidget } from "@/components/PlanFeaturesWidget";
 
 interface Profile {
   company_name: string;
@@ -420,7 +421,7 @@ const Settings = () => {
           <TabsList className={`grid w-full ${
             isViewingClient 
               ? "grid-cols-2" 
-              : (userRole === "accountant" ? "grid-cols-2" : "grid-cols-5")
+              : (userRole === "accountant" ? "grid-cols-2" : "grid-cols-6")
           }`}>
             {!isViewingClient && userRole !== "accountant" && (
               <TabsTrigger value="company" className="flex items-center gap-2">
@@ -437,10 +438,16 @@ const Settings = () => {
             {!isViewingClient && (
               <>
                 {userRole !== "accountant" && (
-                  <TabsTrigger value="payment" className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    Abonament
-                  </TabsTrigger>
+                  <>
+                    <TabsTrigger value="plan" className="flex items-center gap-2">
+                      <Crown className="h-4 w-4" />
+                      Plan
+                    </TabsTrigger>
+                    <TabsTrigger value="payment" className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Abonament
+                    </TabsTrigger>
+                  </>
                 )}
                 <TabsTrigger value="account" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -702,6 +709,12 @@ const Settings = () => {
                   </form>
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {!isViewingClient && userRole !== "accountant" && (
+            <TabsContent value="plan" className="space-y-4">
+              <PlanFeaturesWidget />
             </TabsContent>
           )}
 

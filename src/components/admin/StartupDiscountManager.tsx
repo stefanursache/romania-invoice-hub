@@ -122,7 +122,7 @@ export function StartupDiscountManager({
     }
   };
 
-  const isManualOverride = currentStatus?.eligibility_type === "manual_override";
+  const isAdminApproved = currentStatus?.eligibility_type === "admin_approved";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -142,11 +142,12 @@ export function StartupDiscountManager({
             <div className="p-3 rounded-lg bg-muted text-sm">
               <p className="font-medium mb-1">Status curent:</p>
               <p className="text-muted-foreground">
-                {currentStatus.eligibility_type === "automatic" && "✓ Eligibil automat (cont nou)"}
-                {currentStatus.eligibility_type === "manual_override" && "✓ Override manual activ"}
-                {currentStatus.eligibility_type === "expired_override" && "⚠ Override expirat"}
-                {currentStatus.eligibility_type === "not_eligible" && "✗ Nu este eligibil"}
-                {currentStatus.is_eligible && ` - ${currentStatus.months_remaining} luni rămase`}
+                {currentStatus.eligibility_type === "admin_approved" && currentStatus.is_eligible && "✓ Aprobat de admin"}
+                {currentStatus.eligibility_type === "admin_approved" && !currentStatus.is_eligible && "✗ Respins de admin"}
+                {currentStatus.eligibility_type === "requires_approval" && "⚠ Necesită aprobare admin"}
+                {currentStatus.eligibility_type === "expired_approval" && "⏱ Aprobare expirată"}
+                {currentStatus.is_eligible && currentStatus.months_remaining !== 999 && ` - ${currentStatus.months_remaining} luni rămase`}
+                {currentStatus.is_eligible && currentStatus.months_remaining === 999 && " - Nelimitat"}
               </p>
               {currentStatus.notes && (
                 <p className="text-xs text-muted-foreground mt-1">Note: {currentStatus.notes}</p>
@@ -197,14 +198,14 @@ export function StartupDiscountManager({
         </div>
 
         <DialogFooter className="gap-2">
-          {isManualOverride && (
+          {isAdminApproved && (
             <Button
               variant="destructive"
               onClick={handleRemoveOverride}
               disabled={loading}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Elimină Override
+              Elimină Aprobarea
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>

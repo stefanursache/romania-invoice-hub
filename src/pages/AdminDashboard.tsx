@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook, TrendingUp } from "lucide-react";
+import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook, TrendingUp, Sparkles } from "lucide-react";
 import { WebhookEventsManager } from "@/components/WebhookEventsManager";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { PlanStatsCards } from "@/components/admin/PlanStatsCards";
 import { RevenueAnalytics } from "@/components/admin/RevenueAnalytics";
+import { StartupDiscountList } from "@/components/admin/StartupDiscountList";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -264,6 +265,10 @@ export default function AdminDashboard() {
               <UsersIcon className="h-4 w-4" />
               Utilizatori & Planuri
             </TabsTrigger>
+            <TabsTrigger value="startup-discounts" className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Reduceri Start-up
+            </TabsTrigger>
             <TabsTrigger value="revenue" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Analiză Venituri
@@ -288,6 +293,23 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <UsersTable users={users} onRefresh={loadAllData} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="startup-discounts" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Gestionare Reduceri Start-up
+                </CardTitle>
+                <CardDescription>
+                  Vizualizează și gestionează eligibilitatea utilizatorilor pentru reducerea Start-up de 50%
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StartupDiscountList />
               </CardContent>
             </Card>
           </TabsContent>

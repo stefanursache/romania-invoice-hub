@@ -270,13 +270,13 @@ export const generateInvoicePDF = (
       fillColor: [250, 250, 250],
     },
     columnStyles: {
-      0: { cellWidth: 65, halign: "left" }, // Description - wider
-      1: { cellWidth: 18, halign: "center" }, // Quantity
-      2: { cellWidth: 32, halign: "right" }, // Unit price
-      3: { cellWidth: 18, halign: "center" }, // VAT rate
-      4: { cellWidth: 26, halign: "right" }, // Subtotal
-      5: { cellWidth: 24, halign: "right" }, // VAT amount
-      6: { cellWidth: 32, halign: "right", fontStyle: "bold" }, // Total
+      0: { cellWidth: 55, halign: "left" }, // Description
+      1: { cellWidth: 15, halign: "center" }, // Quantity
+      2: { cellWidth: 28, halign: "right" }, // Unit price
+      3: { cellWidth: 15, halign: "center" }, // VAT rate
+      4: { cellWidth: 22, halign: "right" }, // Subtotal
+      5: { cellWidth: 20, halign: "right" }, // VAT amount
+      6: { cellWidth: 25, halign: "right", fontStyle: "bold" }, // Total
     },
     margin: { left: 15, right: 15 },
     theme: "grid",

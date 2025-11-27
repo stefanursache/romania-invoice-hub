@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Trash2, Loader2, Save, Check, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 interface Client {
   id: string;
@@ -45,6 +46,7 @@ const InvoiceForm = () => {
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientMode, setClientMode] = useState<"existing" | "new">("existing");
+  const { limits, refresh: refreshLimits } = usePlanLimits();
   const [formData, setFormData] = useState({
     invoice_number: "",
     client_id: "",
@@ -294,6 +296,20 @@ const InvoiceForm = () => {
   };
 
   const handleSubmit = async (status: "draft" | "sent") => {
+    // Check plan limits before creating a new invoice
+    if (!id && limits && !limits.canCreateInvoice) {
+      toast.error(
+        `Ai atins limita de ${limits.invoiceLimit} facturi/lună pentru planul ${limits.plan}. Actualizează planul pentru a continua.`,
+        {
+          action: {
+            label: "Actualizează",
+            onClick: () => navigate("/pricing"),
+          },
+        }
+      );
+      return;
+    }
+
     // Validate client selection or new client data
     if (clientMode === "existing" && !formData.client_id) {
       toast.error("Selectează un client");
@@ -405,6 +421,12 @@ const InvoiceForm = () => {
       toast.success(
         status === "draft" ? "Factură salvată ca ciornă" : "Factură finalizată! Așteaptă aprobarea contabilului."
       );
+      
+      // Refresh plan limits after creating invoice
+      if (!id) {
+        refreshLimits();
+      }
+      
       navigate("/invoices");
     } catch (error: any) {
       toast.error(error.message || "Eroare la salvare");

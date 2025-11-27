@@ -10,6 +10,9 @@ import { UserPlus, Trash2, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AccessRequestsManagement from "@/components/AccessRequestsManagement";
 import { InvitationCodeGenerator } from "@/components/InvitationCodeGenerator";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 interface TeamMember {
   id: string;
@@ -29,6 +32,7 @@ export default function Team() {
   const [email, setEmail] = useState("");
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const { limits, refresh: refreshLimits } = usePlanLimits();
 
   useEffect(() => {
     checkAuth();
@@ -113,6 +117,16 @@ export default function Team() {
     e.preventDefault();
     if (!email.trim()) return;
 
+    // Check plan limits
+    if (limits && !limits.canAddMember) {
+      toast({
+        variant: "destructive",
+        title: "Limită atinsă",
+        description: `Ai atins limita de ${limits.memberLimit} membri pentru planul ${limits.plan}. Actualizează planul pentru a adăuga mai mulți membri.`,
+      });
+      return;
+    }
+
     setInviting(true);
     try {
       // First, check if user exists with this email
@@ -161,6 +175,7 @@ export default function Team() {
       });
 
       setEmail("");
+      refreshLimits();
       loadMembers();
     } catch (error: any) {
       toast({
@@ -223,6 +238,16 @@ export default function Team() {
 
         <InvitationCodeGenerator />
 
+        {limits && !limits.canAddMember && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Ai atins limita de {limits.memberLimit} membri pentru planul {limits.plan}. 
+              Actualizează la un plan superior pentru a adăuga mai mulți membri.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -244,7 +269,7 @@ export default function Team() {
                 className="flex-1"
                 disabled={inviting}
               />
-              <Button type="submit" disabled={inviting || !email.trim()}>
+              <Button type="submit" disabled={inviting || !email.trim() || (limits && !limits.canAddMember)}>
                 <UserPlus className="w-4 h-4 mr-2" />
                 {inviting ? "Adding..." : "Add Accountant"}
               </Button>

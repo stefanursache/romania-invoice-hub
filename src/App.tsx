@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import Inventory from "./pages/Inventory";
+import SaftValidator from "./pages/SaftValidator";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/bank-statements" element={<BankStatements />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/saft-validator" element={<SaftValidator />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/gdpr" element={<GDPR />} />

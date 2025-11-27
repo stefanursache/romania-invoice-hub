@@ -21,7 +21,7 @@ const Pricing = () => {
       badge: "3 luni gratuit",
       features: [
         { text: "Până la 3 membri în echipă", included: true },
-        { text: "50 facturi/lună", included: true },
+        { text: "25 facturi/lună", included: true },
         { text: "Gestionare clienți nelimitați", included: true },
         { text: "Generare PDF + XML", included: true },
         { text: "e-Factura (ANAF) inclusă", included: true },
@@ -42,7 +42,7 @@ const Pricing = () => {
       badge: "Recomandat",
       features: [
         { text: "Până la 10 membri în echipă", included: true },
-        { text: "Facturi nelimitate", included: true },
+        { text: "100 facturi/lună", included: true },
         { text: "Tot din Starter +", included: true },
         { text: "Gestiune stocuri avansată", included: true },
         { text: "Rapoarte avansate", included: true },

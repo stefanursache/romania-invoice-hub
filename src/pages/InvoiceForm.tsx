@@ -55,6 +55,7 @@ const InvoiceForm = () => {
     currency: "RON",
     notes: "",
     invoice_type: "invoice" as "invoice" | "proforma",
+    language: "ro" as "ro" | "en",
   });
   const [newClientData, setNewClientData] = useState<NewClientData>({
     name: "",
@@ -174,6 +175,7 @@ const InvoiceForm = () => {
       currency: invoice.currency,
       notes: invoice.notes || "",
       invoice_type: (invoice.invoice_type as "invoice" | "proforma") || "invoice",
+      language: (invoice.language as "ro" | "en") || "ro",
     });
 
     setLoading(false);
@@ -644,6 +646,24 @@ const InvoiceForm = () => {
                     <SelectItem value="RON">RON</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="language">Limbă document</Label>
+                <Select
+                  value={formData.language}
+                  onValueChange={(value: "ro" | "en") =>
+                    setFormData({ ...formData, language: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ro">Română</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -25,7 +25,7 @@ export const usePlanLimits = () => {
       case "enterprise":
         return { invoiceLimit: Infinity, memberLimit: Infinity };
       default:
-        return { invoiceLimit: 0, memberLimit: 1 };
+        return { invoiceLimit: 5, memberLimit: 1 };
     }
   };
 
@@ -64,6 +64,12 @@ export const usePlanLimits = () => {
       const invoicesThisMonth = invoiceCount || 0;
       const currentMembers = (memberCount || 0) + 1; // +1 for owner
 
+      const usagePercentage = planLimits.invoiceLimit === Infinity 
+        ? 0 
+        : planLimits.invoiceLimit > 0 
+          ? (invoicesThisMonth / planLimits.invoiceLimit) * 100
+          : 0;
+
       setLimits({
         plan,
         invoiceLimit: planLimits.invoiceLimit,
@@ -72,7 +78,7 @@ export const usePlanLimits = () => {
         currentMembers,
         canCreateInvoice: invoicesThisMonth < planLimits.invoiceLimit,
         canAddMember: currentMembers < planLimits.memberLimit,
-        usagePercentage: (invoicesThisMonth / planLimits.invoiceLimit) * 100,
+        usagePercentage,
       });
     } catch (error) {
       console.error("Error loading plan limits:", error);

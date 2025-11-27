@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Download, FileText, Loader2, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 import { 
@@ -16,6 +16,8 @@ import {
   validateRequiredAccountsForSaft,
   showValidationErrors 
 } from "@/utils/xmlValidation";
+import { SaftStatusWidget } from "@/components/SaftStatusWidget";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Profile {
   company_name: string;
@@ -244,124 +246,161 @@ const Reports = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">SAF-T (D406) Export</h1>
-          <p className="text-muted-foreground">
-            Generate SAF-T XML files for ANAF submission
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Rapoarte</h1>
+            <p className="text-muted-foreground">
+              Generați rapoarte SAF-T XML pentru ANAF
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            Generare automată: Zilnic la ora 2:00 AM
+          </div>
+        </div>
+
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Informație importantă</AlertTitle>
+          <AlertDescription>
+            Pentru a genera rapoarte SAF-T valide, asigurați-vă că aveți toate datele companiei completate în Setări
+            și conturile obligatorii adăugate în Planul de conturi.
+          </AlertDescription>
+        </Alert>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <CardTitle>Informații Companie</CardTitle>
+                </div>
+                <CardDescription>Aceste informații vor fi incluse în fișierul SAF-T</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Nume Companie</p>
+                    <p className="font-medium">{profile?.company_name || "Necompletat"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">CUI/CIF</p>
+                    <p className="font-medium">{profile?.cui_cif || "Necompletat"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Reg. Com.</p>
+                    <p className="font-medium">{profile?.reg_com || "Necompletat"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Oraș</p>
+                    <p className="font-medium">{profile?.city || "Necompletat"}</p>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <p className="text-xs text-muted-foreground">Adresă</p>
+                    <p className="font-medium">{profile?.address || "Necompletat"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <CardTitle>Generare Export SAF-T</CardTitle>
+                </div>
+                <CardDescription>
+                  Selectați perioada pentru care doriți să generați fișierul SAF-T
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert className="bg-muted/50 border-primary/20">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Conturi obligatorii în Planul de conturi</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc list-inside space-y-1 mt-2 text-sm">
+                      <li><strong>4111</strong> - Creanțe clienți</li>
+                      <li><strong>707</strong> - Venituri din servicii/produse</li>
+                      <li><strong>4427</strong> - TVA colectată</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="periodType">Tip Perioadă</Label>
+                    <Select value={periodType} onValueChange={handlePeriodTypeChange}>
+                      <SelectTrigger id="periodType">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="month">Luna curentă</SelectItem>
+                        <SelectItem value="quarter">Trimestrul curent</SelectItem>
+                        <SelectItem value="year">Anul curent</SelectItem>
+                        <SelectItem value="custom">Perioadă personalizată</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="fromDate">De la data</Label>
+                    <Input
+                      id="fromDate"
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="toDate">Până la data</Label>
+                    <Input
+                      id="toDate"
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={handleGenerate} disabled={generating} className="w-full">
+                  {generating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Se generează...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Generează SAF-T XML
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <SaftStatusWidget exports={exports} onDownload={handleDownloadExport} />
+          </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Company Information</CardTitle>
-            <CardDescription>This information will be included in the SAF-T file</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Company Name:</span> {profile?.company_name || "N/A"}
-              </div>
-              <div>
-                <span className="font-medium">CUI/CIF:</span> {profile?.cui_cif || "N/A"}
-              </div>
-              <div>
-                <span className="font-medium">Reg. Com.:</span> {profile?.reg_com || "N/A"}
-              </div>
-              <div>
-                <span className="font-medium">Address:</span> {profile?.address || "N/A"}
-              </div>
-              <div>
-                <span className="font-medium">City:</span> {profile?.city || "N/A"}
-              </div>
-              <div>
-                <span className="font-medium">Postal Code:</span> {profile?.postal_code || "N/A"}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Generate SAF-T Export</CardTitle>
-            <CardDescription>
-              Select the period for which to generate the SAF-T file. Automatic generation runs monthly on the 1st at 2 AM.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
-              <p className="font-medium">Required Chart of Accounts:</p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>4111 - Client Receivables (Creanțe clienți)</li>
-                <li>707 - Revenue from Services/Products (Venituri)</li>
-                <li>4427 - VAT Payable (TVA colectată)</li>
-              </ul>
-              <p className="text-xs text-muted-foreground mt-2">
-                Make sure these accounts exist in your Chart of Accounts before generating SAF-T.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="periodType">Period Type</Label>
-                <Select value={periodType} onValueChange={handlePeriodTypeChange}>
-                  <SelectTrigger id="periodType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="month">Current Month</SelectItem>
-                    <SelectItem value="quarter">Current Quarter</SelectItem>
-                    <SelectItem value="year">Current Year</SelectItem>
-                    <SelectItem value="custom">Custom Period</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="fromDate">From Date</Label>
-                <Input
-                  id="fromDate"
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="toDate">To Date</Label>
-                <Input
-                  id="toDate"
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <Button onClick={handleGenerate} disabled={generating} className="w-full md:w-auto">
-              {generating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Generate SAF-T XML
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Previous Exports</CardTitle>
-            <CardDescription>Download previously generated SAF-T files</CardDescription>
+            <CardTitle>Istoric Exporturi</CardTitle>
+            <CardDescription>Descărcați fișierele SAF-T generate anterior</CardDescription>
           </CardHeader>
           <CardContent>
             {exports.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No exports yet. Generate your first SAF-T export above.
-              </p>
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Nu există exporturi generate încă
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Generați primul dvs. export SAF-T mai sus
+                </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {exports.map((exp) => (
@@ -369,14 +408,19 @@ const Reports = () => {
                     key={exp.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
-                    <div className="space-y-1">
-                      <p className="font-medium">
-                        {format(new Date(exp.period_from), "dd MMM yyyy")} -{" "}
-                        {format(new Date(exp.period_to), "dd MMM yyyy")}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Generated: {format(new Date(exp.generated_at), "dd MMM yyyy HH:mm")}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium">
+                          {format(new Date(exp.period_from), "dd MMM yyyy", { locale: ro })} -{" "}
+                          {format(new Date(exp.period_to), "dd MMM yyyy", { locale: ro })}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Generat: {format(new Date(exp.generated_at), "dd MMM yyyy HH:mm", { locale: ro })}
+                        </p>
+                      </div>
                     </div>
                     <Button
                       variant="outline"
@@ -384,7 +428,7 @@ const Reports = () => {
                       onClick={() => handleDownloadExport(exp)}
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Download
+                      Descarcă
                     </Button>
                   </div>
                 ))}

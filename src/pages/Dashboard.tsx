@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users, TrendingUp, Clock } from "lucide-react";
 import { SaftStatusWidget } from "@/components/SaftStatusWidget";
+import { InvoiceUsageWidget } from "@/components/InvoiceUsageWidget";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -96,7 +97,8 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
+            <InvoiceUsageWidget />
             <SaftStatusWidget />
           </div>
           

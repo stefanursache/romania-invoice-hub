@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Building2, Rocket, Crown } from "lucide-react";
+import { Check, X, Building2, Rocket, Crown, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
+  const [showStartupDiscount, setShowStartupDiscount] = useState(true);
 
   const plans = [
     {
@@ -78,18 +80,26 @@ const Pricing = () => {
     },
   ];
 
-  const calculatePrice = (plan: typeof plans[0]) => {
+  const calculatePrice = (plan: typeof plans[0], withStartupDiscount: boolean = false) => {
     if (plan.monthlyPrice === null) return "Personalizat";
     
-    const price = isAnnual ? plan.annualPrice : plan.monthlyPrice;
+    let price = isAnnual ? plan.annualPrice : plan.monthlyPrice;
     const period = isAnnual ? "an" : "lună";
     const savings = isAnnual && plan.monthlyPrice > 0 
       ? Math.round(((plan.monthlyPrice * 12 - plan.annualPrice) / (plan.monthlyPrice * 12)) * 100)
       : 0;
 
+    // Apply 50% startup discount
+    const startupDiscountedPrice = withStartupDiscount && showStartupDiscount ? Math.round(price * 0.5) : price;
+    const originalPrice = price;
+    price = startupDiscountedPrice;
+
     return (
       <div className="space-y-1">
         <div className="flex items-baseline gap-1">
+          {withStartupDiscount && showStartupDiscount && (
+            <span className="text-2xl font-bold line-through text-muted-foreground">{originalPrice}</span>
+          )}
           <span className="text-4xl font-bold">{price}</span>
           <span className="text-lg text-muted-foreground">RON</span>
         </div>
@@ -101,6 +111,12 @@ const Pricing = () => {
             </Badge>
           )}
         </div>
+        {withStartupDiscount && showStartupDiscount && (
+          <div className="flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400 mt-1">
+            <Sparkles className="h-3 w-3" />
+            50% reducere Start-up (12 luni)
+          </div>
+        )}
         {plan.name === "Starter" && (
           <div className="text-xs font-semibold text-primary mt-1">
             Primele 3 luni gratuit
@@ -149,6 +165,20 @@ const Pricing = () => {
             Alege planul potrivit pentru afacerea ta. Toate planurile includ acces la e-Factura și SAF-T.
           </p>
 
+          {/* Startup Discount Banner */}
+          {showStartupDiscount && (
+            <Alert className="max-w-3xl mx-auto mb-8 border-green-500/50 bg-green-50 dark:bg-green-950/30">
+              <Sparkles className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <AlertTitle className="text-green-900 dark:text-green-100">
+                Reducere Specială Start-up 🚀
+              </AlertTitle>
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                <strong>50% reducere pentru primele 12 luni</strong> pentru companiile înființate în ultimul an!
+                Verifică eligibilitatea după înregistrare în secțiunea Setări.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Annual/Monthly Toggle */}
           <div className="flex items-center justify-center gap-4 mt-8">
             <Label htmlFor="billing-toggle" className={!isAnnual ? "font-bold" : ""}>
@@ -164,6 +194,19 @@ const Pricing = () => {
               <Badge variant="default" className="ml-2">
                 Economisești până la 17%
               </Badge>
+            </Label>
+          </div>
+          
+          {/* Startup Discount Toggle */}
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <Switch
+              id="startup-discount-toggle"
+              checked={showStartupDiscount}
+              onCheckedChange={setShowStartupDiscount}
+            />
+            <Label htmlFor="startup-discount-toggle" className="text-sm cursor-pointer flex items-center gap-1">
+              <Sparkles className="h-4 w-4 text-green-600" />
+              Arată prețuri cu reducere Start-up
             </Label>
           </div>
         </div>
@@ -205,7 +248,7 @@ const Pricing = () => {
                 </CardHeader>
 
                 <CardContent className="flex-1">
-                  <div className="mb-6">{calculatePrice(plan)}</div>
+                  <div className="mb-6">{calculatePrice(plan, plan.monthlyPrice !== null)}</div>
 
                   <ul className="space-y-3">
                     {plan.features.map((feature, fIndex) => (

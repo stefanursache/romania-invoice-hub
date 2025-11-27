@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Download, FileText, Loader2, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
+import { Download, FileText, Loader2, AlertCircle, CheckCircle2, Calendar, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
+import { Link } from "react-router-dom";
 import { 
   validateProfileForSaftExport, 
   validateRequiredAccountsForSaft,
@@ -253,9 +254,17 @@ const Reports = () => {
               Generați rapoarte SAF-T XML pentru ANAF
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            Generare automată: Zilnic la ora 2:00 AM
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              Generare automată: Zilnic la ora 2:00 AM
+            </div>
+            <Link to="/saft-validator">
+              <Button variant="outline">
+                <Shield className="h-4 w-4 mr-2" />
+                Validare SAF-T
+              </Button>
+            </Link>
           </div>
         </div>
 

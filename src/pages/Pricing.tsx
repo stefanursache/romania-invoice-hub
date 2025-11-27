@@ -15,10 +15,10 @@ const Pricing = () => {
       name: "Starter",
       icon: Building2,
       description: "Perfect pentru mici afaceri și PFA-uri",
-      monthlyPrice: 29,
-      annualPrice: 299,
+      monthlyPrice: 15,
+      annualPrice: 150,
       teamMembers: 3,
-      badge: null,
+      badge: "3 luni gratuit",
       features: [
         { text: "Până la 3 membri în echipă", included: true },
         { text: "50 facturi/lună", included: true },
@@ -29,15 +29,15 @@ const Pricing = () => {
         { text: "Rapoarte de bază", included: true },
         { text: "Suport email", included: true },
       ],
-      cta: "Începe acum",
+      cta: "Începe gratuit",
       popular: false,
     },
     {
       name: "Professional",
       icon: Rocket,
       description: "Pentru afaceri în creștere cu echipe mari",
-      monthlyPrice: 79,
-      annualPrice: 799,
+      monthlyPrice: 35,
+      annualPrice: 299,
       teamMembers: 10,
       badge: "Recomandat",
       features: [
@@ -80,7 +80,6 @@ const Pricing = () => {
 
   const calculatePrice = (plan: typeof plans[0]) => {
     if (plan.monthlyPrice === null) return "Personalizat";
-    if (plan.monthlyPrice === 0) return "Gratuit";
     
     const price = isAnnual ? plan.annualPrice : plan.monthlyPrice;
     const period = isAnnual ? "an" : "lună";
@@ -102,6 +101,11 @@ const Pricing = () => {
             </Badge>
           )}
         </div>
+        {plan.name === "Starter" && (
+          <div className="text-xs font-semibold text-primary mt-1">
+            Primele 3 luni gratuit
+          </div>
+        )}
         {isAnnual && plan.monthlyPrice > 0 && (
           <div className="text-xs text-muted-foreground">
             ({Math.round(price / 12)} RON/lună)
@@ -251,16 +255,16 @@ const Pricing = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-4">
-                  Începând de la doar 19 RON/lună, oferim mai multe funcționalități decât competitorii care taxează 65+ RON/lună.
+                  Începând de la doar 15 RON/lună după perioada de probă gratuită, oferim mai multe funcționalități decât competitorii care taxează 65+ RON/lună.
                 </p>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-primary" />
-                    Mai ieftin cu 70% vs SmartBill
+                    Mai ieftin cu 75% vs SmartBill
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-primary" />
-                    Mai multe funcții vs Oblio
+                    3 luni gratuit pentru Starter
                   </li>
                 </ul>
               </CardContent>
@@ -368,12 +372,12 @@ const Pricing = () => {
             Gata să începi?
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Încearcă SmartInvoice gratuit timp de 30 de zile. Fără card, fără obligații.
+            Încearcă SmartInvoice gratuit timp de 3 luni cu planul Starter. Fără card, fără obligații.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link to="/auth">
               <Button size="lg" className="text-lg px-8">
-                Încearcă gratuit 30 zile
+                Începe gratuit 3 luni
               </Button>
             </Link>
             <Link to="/contact">

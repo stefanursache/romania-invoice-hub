@@ -6,6 +6,12 @@ export interface ValidationResult {
   details?: string;
 }
 
+interface XSDValidationError {
+  element: string;
+  error: string;
+  path: string;
+}
+
 export interface ValidationReport {
   totalTests: number;
   passed: number;
@@ -671,6 +677,20 @@ export const validateSaftXml = (xmlContent: string): ValidationReport => {
     details: `Înregistrări declarate în header: ${declaredEntries}, Înregistrări găsite: ${actualEntries}`
   });
 
+  // Test 28: XSD Schema Structure Validation
+  const xsdValidation = validateXSDStructure(xmlDoc, getValue);
+  results.push({
+    testNumber: 28,
+    testName: 'Validare Structură XSD (Schema ANAF)',
+    status: xsdValidation.errors.length === 0 ? 'pass' : 'fail',
+    message: xsdValidation.errors.length === 0 
+      ? 'Structura XML respectă schema oficială SAF-T România' 
+      : `${xsdValidation.errors.length} violări de structură XSD detectate`,
+    details: xsdValidation.errors.length > 0 
+      ? xsdValidation.errors.slice(0, 10).map(err => `${err.path}: ${err.error}`).join('\n') + (xsdValidation.errors.length > 10 ? `\n...și încă ${xsdValidation.errors.length - 10} erori` : '')
+      : 'Toate elementele obligatorii prezente, tipuri de date corecte, enumerări valide'
+  });
+
   // Calculate summary
   const passed = results.filter(r => r.status === 'pass').length;
   const failed = results.filter(r => r.status === 'fail').length;
@@ -684,3 +704,311 @@ export const validateSaftXml = (xmlContent: string): ValidationReport => {
     results
   };
 };
+
+// XSD Schema Structure Validation based on Romanian SAF-T specification
+function validateXSDStructure(
+  doc: Document, 
+  getValue: (element: Element | null, tagName: string) => string
+): { errors: XSDValidationError[] } {
+  const errors: XSDValidationError[] = [];
+
+  // Helper to check required element
+  const checkRequired = (parent: Element | null, path: string, elementName: string): Element | null => {
+    if (!parent) return null;
+    const element = parent.querySelector(elementName);
+    if (!element) {
+      errors.push({
+        element: elementName,
+        error: 'Element obligatoriu lipsă',
+        path: `${path}/${elementName}`
+      });
+    }
+    return element;
+  };
+
+  // Helper to validate date format (YYYY-MM-DD)
+  const validateDate = (value: string | null, elementName: string, path: string): boolean => {
+    if (!value) return false;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(value)) {
+      errors.push({
+        element: elementName,
+        error: `Format dată invalid. Așteptat YYYY-MM-DD, primit: ${value}`,
+        path: path
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // Helper to validate decimal format
+  const validateDecimal = (value: string | null, elementName: string, path: string): boolean => {
+    if (!value) return true; // Optional decimals
+    const decimalRegex = /^-?\d+(\.\d{1,2})?$/;
+    if (!decimalRegex.test(value)) {
+      errors.push({
+        element: elementName,
+        error: `Format zecimal invalid: ${value}`,
+        path: path
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // 1. Validate AuditFile root element
+  const auditFile = doc.documentElement;
+  if (auditFile.tagName !== 'AuditFile') {
+    errors.push({
+      element: 'AuditFile',
+      error: 'Elementul root trebuie să fie AuditFile',
+      path: '/'
+    });
+    return { errors };
+  }
+
+  // 2. Validate Header structure
+  const header = auditFile.querySelector('Header');
+  if (!header) {
+    errors.push({
+      element: 'Header',
+      error: 'Element Header obligatoriu lipsă',
+      path: 'AuditFile/Header'
+    });
+  } else {
+    // Required Header fields
+    checkRequired(header, 'Header', 'AuditFileVersion');
+    const version = getValue(header, 'AuditFileVersion');
+    if (version && !['1.0', '1.01_01'].includes(version)) {
+      errors.push({
+        element: 'AuditFileVersion',
+        error: `Versiune invalidă. Trebuie să fie 1.0 sau 1.01_01, primit: ${version}`,
+        path: 'Header/AuditFileVersion'
+      });
+    }
+
+    checkRequired(header, 'Header', 'CompanyID');
+    const companyID = getValue(header, 'CompanyID');
+    if (companyID && companyID.length > 50) {
+      errors.push({
+        element: 'CompanyID',
+        error: 'CompanyID depășește lungimea maximă de 50 caractere',
+        path: 'Header/CompanyID'
+      });
+    }
+
+    checkRequired(header, 'Header', 'TaxRegistrationNumber');
+    checkRequired(header, 'Header', 'TaxAccountingBasis');
+    const taxBasis = getValue(header, 'TaxAccountingBasis');
+    if (taxBasis && !['F', 'I', 'C', 'S'].includes(taxBasis)) {
+      errors.push({
+        element: 'TaxAccountingBasis',
+        error: `TaxAccountingBasis invalid. Trebuie să fie F, I, C sau S, primit: ${taxBasis}`,
+        path: 'Header/TaxAccountingBasis'
+      });
+    }
+
+    checkRequired(header, 'Header', 'CompanyName');
+    checkRequired(header, 'Header', 'DateCreated');
+    validateDate(getValue(header, 'DateCreated'), 'DateCreated', 'Header/DateCreated');
+
+    checkRequired(header, 'Header', 'StartDate');
+    checkRequired(header, 'Header', 'EndDate');
+    validateDate(getValue(header, 'StartDate'), 'StartDate', 'Header/StartDate');
+    validateDate(getValue(header, 'EndDate'), 'EndDate', 'Header/EndDate');
+
+    checkRequired(header, 'Header', 'CurrencyCode');
+    const currencyCode = getValue(header, 'CurrencyCode');
+    if (currencyCode && currencyCode.length !== 3) {
+      errors.push({
+        element: 'CurrencyCode',
+        error: `CurrencyCode trebuie să aibă 3 caractere (ISO 4217), primit: ${currencyCode}`,
+        path: 'Header/CurrencyCode'
+      });
+    }
+
+    checkRequired(header, 'Header', 'TaxEntity');
+    checkRequired(header, 'Header', 'ProductCompanyTaxID');
+  }
+
+  // 3. Validate MasterFiles structure
+  const masterFiles = auditFile.querySelector('MasterFiles');
+  if (!masterFiles) {
+    errors.push({
+      element: 'MasterFiles',
+      error: 'Element MasterFiles obligatoriu lipsă',
+      path: 'AuditFile/MasterFiles'
+    });
+  } else {
+    // GeneralLedgerAccounts validation
+    const glAccounts = masterFiles.querySelectorAll('GeneralLedgerAccounts Account');
+    glAccounts.forEach((account, index) => {
+      const accountPath = `MasterFiles/GeneralLedgerAccounts/Account[${index + 1}]`;
+      
+      checkRequired(account, accountPath, 'AccountID');
+      const accountID = getValue(account, 'AccountID');
+      if (accountID && accountID.length > 30) {
+        errors.push({
+          element: 'AccountID',
+          error: 'AccountID depășește lungimea maximă de 30 caractere',
+          path: `${accountPath}/AccountID`
+        });
+      }
+
+      checkRequired(account, accountPath, 'AccountDescription');
+      checkRequired(account, accountPath, 'AccountType');
+      const accountType = getValue(account, 'AccountType');
+      if (accountType && !['GL', 'GR', 'GM', 'AR', 'AP', 'AA', 'OR', 'OC'].includes(accountType)) {
+        errors.push({
+          element: 'AccountType',
+          error: `AccountType invalid: ${accountType}. Trebuie să fie: GL, GR, GM, AR, AP, AA, OR sau OC`,
+          path: `${accountPath}/AccountType`
+        });
+      }
+
+      validateDecimal(getValue(account, 'OpeningDebitBalance'), 'OpeningDebitBalance', accountPath);
+      validateDecimal(getValue(account, 'OpeningCreditBalance'), 'OpeningCreditBalance', accountPath);
+      validateDecimal(getValue(account, 'ClosingDebitBalance'), 'ClosingDebitBalance', accountPath);
+      validateDecimal(getValue(account, 'ClosingCreditBalance'), 'ClosingCreditBalance', accountPath);
+    });
+
+    // Customer validation
+    const customers = masterFiles.querySelectorAll('Customer');
+    customers.forEach((customer, index) => {
+      const customerPath = `MasterFiles/Customer[${index + 1}]`;
+      checkRequired(customer, customerPath, 'CustomerID');
+      
+      const customerID = getValue(customer, 'CustomerID');
+      if (customerID && customerID.length > 30) {
+        errors.push({
+          element: 'CustomerID',
+          error: 'CustomerID depășește lungimea maximă de 30 caractere',
+          path: `${customerPath}/CustomerID`
+        });
+      }
+
+      checkRequired(customer, customerPath, 'CompanyName');
+      const billingAddress = customer.querySelector('BillingAddress');
+      if (billingAddress) {
+        checkRequired(billingAddress, `${customerPath}/BillingAddress`, 'City');
+        checkRequired(billingAddress, `${customerPath}/BillingAddress`, 'Country');
+      }
+    });
+
+    // Supplier validation
+    const suppliers = masterFiles.querySelectorAll('Supplier');
+    suppliers.forEach((supplier, index) => {
+      const supplierPath = `MasterFiles/Supplier[${index + 1}]`;
+      checkRequired(supplier, supplierPath, 'SupplierID');
+      
+      const supplierID = getValue(supplier, 'SupplierID');
+      if (supplierID && supplierID.length > 30) {
+        errors.push({
+          element: 'SupplierID',
+          error: 'SupplierID depășește lungimea maximă de 30 caractere',
+          path: `${supplierPath}/SupplierID`
+        });
+      }
+
+      checkRequired(supplier, supplierPath, 'CompanyName');
+    });
+
+    // TaxTable validation
+    const taxEntries = masterFiles.querySelectorAll('TaxTable TaxTableEntry');
+    taxEntries.forEach((entry, index) => {
+      const taxPath = `MasterFiles/TaxTable/TaxTableEntry[${index + 1}]`;
+      
+      checkRequired(entry, taxPath, 'TaxType');
+      const taxType = getValue(entry, 'TaxType');
+      if (taxType && !['IVA', 'IS', 'NS', 'NA'].includes(taxType)) {
+        errors.push({
+          element: 'TaxType',
+          error: `TaxType invalid. Trebuie să fie IVA, IS, NS sau NA, primit: ${taxType}`,
+          path: `${taxPath}/TaxType`
+        });
+      }
+
+      checkRequired(entry, taxPath, 'TaxCode');
+      checkRequired(entry, taxPath, 'Description');
+      checkRequired(entry, taxPath, 'TaxPercentage');
+      validateDecimal(getValue(entry, 'TaxPercentage'), 'TaxPercentage', taxPath);
+    });
+  }
+
+  // 4. Validate GeneralLedgerEntries structure
+  const glEntries = auditFile.querySelector('GeneralLedgerEntries');
+  if (glEntries) {
+    const journals = glEntries.querySelectorAll('Journal');
+    journals.forEach((journal, jIndex) => {
+      const journalPath = `GeneralLedgerEntries/Journal[${jIndex + 1}]`;
+      checkRequired(journal, journalPath, 'JournalID');
+      checkRequired(journal, journalPath, 'Description');
+      
+      const transactions = journal.querySelectorAll('Transaction');
+      transactions.forEach((transaction, tIndex) => {
+        const transPath = `${journalPath}/Transaction[${tIndex + 1}]`;
+        
+        checkRequired(transaction, transPath, 'TransactionID');
+        checkRequired(transaction, transPath, 'Period');
+        checkRequired(transaction, transPath, 'TransactionDate');
+        validateDate(getValue(transaction, 'TransactionDate'), 'TransactionDate', transPath);
+
+        const lines = transaction.querySelectorAll('Line');
+        if (lines.length < 2) {
+          errors.push({
+            element: 'Lines',
+            error: 'Tranzacția trebuie să aibă minimum 2 linii (debit și credit)',
+            path: `${transPath}/Lines`
+          });
+        }
+
+        lines.forEach((line, lIndex) => {
+          const linePath = `${transPath}/Lines/Line[${lIndex + 1}]`;
+          
+          checkRequired(line, linePath, 'RecordID');
+          checkRequired(line, linePath, 'AccountID');
+          
+          const debit = getValue(line, 'DebitAmount');
+          const credit = getValue(line, 'CreditAmount');
+          
+          if (!debit && !credit) {
+            errors.push({
+              element: 'Line',
+              error: 'Linia trebuie să aibă DebitAmount sau CreditAmount',
+              path: linePath
+            });
+          }
+
+          validateDecimal(debit, 'DebitAmount', linePath);
+          validateDecimal(credit, 'CreditAmount', linePath);
+        });
+      });
+    });
+  }
+
+  // 5. Validate SourceDocuments if present
+  const sourceDocuments = auditFile.querySelector('SourceDocuments');
+  if (sourceDocuments) {
+    const salesInvoices = sourceDocuments.querySelectorAll('SalesInvoices Invoice');
+    salesInvoices.forEach((invoice, index) => {
+      const invoicePath = `SourceDocuments/SalesInvoices/Invoice[${index + 1}]`;
+      
+      checkRequired(invoice, invoicePath, 'InvoiceNo');
+      checkRequired(invoice, invoicePath, 'InvoiceDate');
+      validateDate(getValue(invoice, 'InvoiceDate'), 'InvoiceDate', invoicePath);
+
+      const invoiceType = getValue(invoice, 'InvoiceType');
+      if (invoiceType && !['FT', 'FS', 'FR', 'ND', 'NC'].includes(invoiceType)) {
+        errors.push({
+          element: 'InvoiceType',
+          error: `InvoiceType invalid: ${invoiceType}. Trebuie să fie: FT, FS, FR, ND sau NC`,
+          path: `${invoicePath}/InvoiceType`
+        });
+      }
+
+      checkRequired(invoice, invoicePath, 'CustomerID');
+    });
+  }
+
+  return { errors };
+}

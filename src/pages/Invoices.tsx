@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
@@ -14,13 +14,15 @@ import { InvoicePreview } from "@/components/InvoicePreview";
 import { InvoiceApprovalDialog } from "@/components/InvoiceApprovalDialog";
 import { InvoiceStatusWorkflow } from "@/components/InvoiceStatusWorkflow";
 import { SpvConfirmationDialog } from "@/components/SpvConfirmationDialog";
+import { SpvValidationReport } from "@/components/SpvValidationReport";
 import { 
   validateProfileForEFactura, 
   validateClientForEFactura,
   validateInvoiceForEFactura,
   showValidationErrors 
 } from "@/utils/xmlValidation";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { validateEFacturaForSpv } from "@/utils/spvValidator";
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Invoice {
   id: string;
@@ -64,6 +66,9 @@ const Invoices = () => {
   } | null>(null);
   const [spvConfirmDialogOpen, setSpvConfirmDialogOpen] = useState(false);
   const [selectedInvoiceForSpv, setSelectedInvoiceForSpv] = useState<{ id: string; invoice_number: string } | null>(null);
+  const [validatingSpv, setValidatingSpv] = useState<Record<string, boolean>>({});
+  const [spvValidationDialogOpen, setSpvValidationDialogOpen] = useState(false);
+  const [spvValidationReport, setSpvValidationReport] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -499,6 +504,85 @@ const Invoices = () => {
     }
   };
 
+  const handleValidateForSpv = async (invoiceId: string) => {
+    setValidatingSpv((prev) => ({ ...prev, [invoiceId]: true }));
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Nu ești autentificat");
+        return;
+      }
+
+      // Determine the user ID to use for data fetching
+      const userIdToUse = workspaceOwnerId || user.id;
+
+      // Fetch invoice with all related data
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          clients (
+            name,
+            cui_cif,
+            email,
+            phone,
+            address,
+            reg_com
+          )
+        `)
+        .eq("id", invoiceId)
+        .single();
+
+      if (invoiceError || !invoiceData) {
+        throw new Error("Eroare la încărcarea facturii");
+      }
+
+      // Fetch invoice items
+      const { data: items, error: itemsError } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", invoiceId);
+
+      if (itemsError) {
+        throw new Error("Eroare la încărcarea produselor/serviciilor");
+      }
+
+      // Fetch profile (supplier data)
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userIdToUse)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Eroare la încărcarea profilului companiei");
+      }
+
+      // Run comprehensive SPV validation
+      const validationReport = validateEFacturaForSpv(
+        invoiceData,
+        items || [],
+        profile,
+        invoiceData.clients
+      );
+
+      setSpvValidationReport(validationReport);
+      setSpvValidationDialogOpen(true);
+
+      if (validationReport.failed === 0) {
+        toast.success("Validare completă! Factura este gata pentru ANAF SPV.");
+      } else if (validationReport.failed > 0) {
+        toast.warning(`Validare completă cu ${validationReport.failed} erori.`);
+      }
+    } catch (error: any) {
+      console.error("Error validating for SPV:", error);
+      toast.error(error.message || "Eroare la validarea pentru SPV");
+    } finally {
+      setValidatingSpv((prev) => ({ ...prev, [invoiceId]: false }));
+    }
+  };
+
   const handleExportCSV = () => {
     const exportData = invoices.map((invoice) => ({
       invoice_type: invoice.invoice_type === "proforma" ? "Pro Forma" : "Factură Fiscală",
@@ -761,23 +845,39 @@ const Invoices = () => {
                            )}
                          </Button>
                        )}
+                       {/* Validate for SPV button - shows after accountant approval */}
+                       {invoice.accountant_approved && invoice.status !== "paid" && !invoice.spv_sent_at && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleValidateForSpv(invoice.id)}
+                            disabled={validatingSpv[invoice.id]}
+                            title="Validează pentru SPV"
+                          >
+                            {validatingSpv[invoice.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <ShieldCheck className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                        {/* Send to SPV button - shows after accountant approval for both owners and accountants */}
                        {invoice.accountant_approved && invoice.status !== "paid" && (
-                         <Button
-                           size="sm"
-                           variant="default"
-                           onClick={() => handleSendToSPV(invoice.id, invoice.invoice_number)}
-                           disabled={sendingToSpv[invoice.id]}
-                           title="Trimite în SPV"
-                           className="bg-green-600 hover:bg-green-700"
-                         >
-                           {sendingToSpv[invoice.id] ? (
-                             <Loader2 className="h-4 w-4 animate-spin" />
-                           ) : (
-                             <Send className="h-4 w-4" />
-                           )}
-                         </Button>
-                       )}
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleSendToSPV(invoice.id, invoice.invoice_number)}
+                            disabled={sendingToSpv[invoice.id]}
+                            title="Trimite în SPV"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {sendingToSpv[invoice.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                      </div>
                   </div>
                 </CardContent>
@@ -808,6 +908,18 @@ const Invoices = () => {
           onConfirm={confirmSendToSPV}
           invoiceNumber={selectedInvoiceForSpv?.invoice_number || ""}
         />
+
+        {/* SPV Validation Report Dialog */}
+        <Dialog open={spvValidationDialogOpen} onOpenChange={setSpvValidationDialogOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Raport Validare SPV / e-Factura</DialogTitle>
+            </DialogHeader>
+            {spvValidationReport && (
+              <SpvValidationReport report={spvValidationReport} />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

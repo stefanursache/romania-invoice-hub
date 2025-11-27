@@ -2,12 +2,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, AlertTriangle, Crown } from "lucide-react";
+import { FileText, AlertTriangle, Crown, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { endOfMonth, differenceInDays } from "date-fns";
 
 export const InvoiceUsageWidget = () => {
   const { limits, loading } = usePlanLimits();
+
+  const daysRemaining = differenceInDays(endOfMonth(new Date()), new Date());
 
   if (loading || !limits) {
     return (
@@ -50,6 +53,10 @@ export const InvoiceUsageWidget = () => {
             value={Math.min(limits.usagePercentage, 100)} 
             className="h-2"
           />
+          <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Se resetează în {daysRemaining} {daysRemaining === 1 ? 'zi' : 'zile'}</span>
+          </div>
         </div>
 
         {isAtLimit && (

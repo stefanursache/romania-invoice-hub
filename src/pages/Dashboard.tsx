@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users, TrendingUp, Clock } from "lucide-react";
 import { SaftStatusWidget } from "@/components/SaftStatusWidget";
 import { InvoiceUsageWidget } from "@/components/InvoiceUsageWidget";
+import { StartupDiscountBanner } from "@/components/StartupDiscountBanner";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -76,6 +77,8 @@ const Dashboard = () => {
           <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
           <p className="text-muted-foreground">Bine ai venit! Iată o privire de ansamblu.</p>
         </div>
+
+        <StartupDiscountBanner />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((stat) => {

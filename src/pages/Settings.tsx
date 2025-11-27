@@ -13,6 +13,7 @@ import { Loader2, Building2, KeyRound, User, Cloud, CreditCard, ArrowLeft, Crown
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { PlanFeaturesWidget } from "@/components/PlanFeaturesWidget";
+import { StartupDiscountBanner } from "@/components/StartupDiscountBanner";
 
 interface Profile {
   company_name: string;
@@ -714,6 +715,7 @@ const Settings = () => {
 
           {!isViewingClient && userRole !== "accountant" && (
             <TabsContent value="plan" className="space-y-4">
+              <StartupDiscountBanner />
               <PlanFeaturesWidget />
             </TabsContent>
           )}

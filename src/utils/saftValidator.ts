@@ -197,6 +197,70 @@ export const validateSaftXml = (xmlContent: string): ValidationReport => {
     details: taxDetails || `Total taxe: ${taxEntries.length}`
   });
 
+  // Test 9: Master File - Products
+  const products = xmlDoc.querySelectorAll('MasterFiles Products Product');
+  let productsValid = true;
+  let productsDetails = '';
+  products.forEach((product, index) => {
+    const productCode = getValue(product, 'ProductCode');
+    const productDescription = getValue(product, 'ProductDescription');
+    const productNumberCode = getValue(product, 'ProductNumberCode');
+    
+    if (!productCode || !productDescription) {
+      productsValid = false;
+      productsDetails += `Produs ${index + 1}: date incomplete. `;
+    }
+  });
+  results.push({
+    testNumber: 9,
+    testName: 'Master File - Produse',
+    status: products.length > 0 ? (productsValid ? 'pass' : 'fail') : 'warning',
+    message: products.length > 0 ? (productsValid ? `${products.length} produse validate cu succes` : 'Produse cu date incomplete') : 'Nu există produse în fișier',
+    details: productsDetails || `Total produse: ${products.length}`
+  });
+
+  // Test 10: Master File - Analysis Types
+  const analysisTypes = xmlDoc.querySelectorAll('MasterFiles Analysis AnalysisTypeTable AnalysisTypeTableEntry');
+  let analysisValid = true;
+  let analysisDetails = '';
+  analysisTypes.forEach((entry, index) => {
+    const analysisType = getValue(entry, 'AnalysisType');
+    const analysisTypeDescription = getValue(entry, 'AnalysisTypeDescription');
+    
+    if (!analysisType || !analysisTypeDescription) {
+      analysisValid = false;
+      analysisDetails += `Analiză ${index + 1}: date incomplete. `;
+    }
+  });
+  results.push({
+    testNumber: 10,
+    testName: 'Master File - Tipuri Analiză',
+    status: analysisTypes.length > 0 ? (analysisValid ? 'pass' : 'fail') : 'warning',
+    message: analysisTypes.length > 0 ? (analysisValid ? `${analysisTypes.length} tipuri analiză validate cu succes` : 'Tipuri analiză incomplete') : 'Nu există tipuri de analiză',
+    details: analysisDetails || `Total tipuri analiză: ${analysisTypes.length}`
+  });
+
+  // Test 11: Master File - UOM Table
+  const uomEntries = xmlDoc.querySelectorAll('MasterFiles UOMTable UOMTableEntry');
+  let uomValid = true;
+  let uomDetails = '';
+  uomEntries.forEach((entry, index) => {
+    const unitOfMeasure = getValue(entry, 'UnitOfMeasure');
+    const description = getValue(entry, 'Description');
+    
+    if (!unitOfMeasure || !description) {
+      uomValid = false;
+      uomDetails += `UOM ${index + 1}: date incomplete. `;
+    }
+  });
+  results.push({
+    testNumber: 11,
+    testName: 'Master File - Unități Măsură',
+    status: uomEntries.length > 0 ? (uomValid ? 'pass' : 'fail') : 'warning',
+    message: uomEntries.length > 0 ? (uomValid ? `${uomEntries.length} unități măsură validate cu succes` : 'Unități măsură incomplete') : 'Nu există unități de măsură',
+    details: uomDetails || `Total unități măsură: ${uomEntries.length}`
+  });
+
   // Test 12: Opening Balance Equality (excluding classes 8 and 9)
   let totalOpeningDebit = 0;
   let totalOpeningCredit = 0;
@@ -235,8 +299,74 @@ export const validateSaftXml = (xmlContent: string): ValidationReport => {
     details: `Total Debit: ${totalClosingDebit.toFixed(2)} RON, Total Credit: ${totalClosingCredit.toFixed(2)} RON, Diferență: ${closingBalanceDiff.toFixed(2)} RON`
   });
 
-  // Test 16: General Ledger Entries - Total Debit = Total Credit
+  // Test 14: Each Transaction Balance (Debit = Credit per transaction)
   const transactions = xmlDoc.querySelectorAll('GeneralLedgerEntries Journal Transaction');
+  let unbalancedTransactions = 0;
+  let transactionBalanceDetails = '';
+  transactions.forEach((transaction, index) => {
+    const transactionID = getValue(transaction, 'TransactionID');
+    const lines = transaction.querySelectorAll('Line');
+    let transDebit = 0;
+    let transCredit = 0;
+    lines.forEach(line => {
+      transDebit += parseFloat(getValue(line, 'DebitAmount') || '0');
+      transCredit += parseFloat(getValue(line, 'CreditAmount') || '0');
+    });
+    const diff = Math.abs(transDebit - transCredit);
+    if (diff > 0.01) {
+      unbalancedTransactions++;
+      transactionBalanceDetails += `Tranzacție ${transactionID || index + 1}: Debit ${transDebit.toFixed(2)} ≠ Credit ${transCredit.toFixed(2)}. `;
+    }
+  });
+  results.push({
+    testNumber: 14,
+    testName: 'Echilibru Individual Tranzacții',
+    status: unbalancedTransactions === 0 ? 'pass' : 'fail',
+    message: unbalancedTransactions === 0 ? `Toate ${transactions.length} tranzacțiile sunt echilibrate` : `${unbalancedTransactions} tranzacții neechilibrate`,
+    details: transactionBalanceDetails || `Total tranzacții verificate: ${transactions.length}`
+  });
+
+  // Test 15: Customer/Supplier References Validity
+  let invalidReferences = 0;
+  let referenceDetails = '';
+  const customerIds = new Set<string>();
+  const supplierIds = new Set<string>();
+  
+  customers.forEach(customer => {
+    const custId = getValue(customer, 'CustomerID');
+    if (custId) customerIds.add(custId);
+  });
+  
+  suppliers.forEach(supplier => {
+    const suppId = getValue(supplier, 'SupplierID');
+    if (suppId) supplierIds.add(suppId);
+  });
+
+  transactions.forEach((transaction, index) => {
+    const lines = transaction.querySelectorAll('Line');
+    lines.forEach(line => {
+      const customerID = getValue(line, 'CustomerID');
+      const supplierID = getValue(line, 'SupplierID');
+      
+      if (customerID && !customerIds.has(customerID)) {
+        invalidReferences++;
+        referenceDetails += `Tranzacție ${index + 1}: Client ${customerID} nu există în MasterFiles. `;
+      }
+      if (supplierID && !supplierIds.has(supplierID)) {
+        invalidReferences++;
+        referenceDetails += `Tranzacție ${index + 1}: Furnizor ${supplierID} nu există în MasterFiles. `;
+      }
+    });
+  });
+  results.push({
+    testNumber: 15,
+    testName: 'Validitate Referințe Client/Furnizor',
+    status: invalidReferences === 0 ? 'pass' : 'fail',
+    message: invalidReferences === 0 ? 'Toate referințele către clienți/furnizori sunt valide' : `${invalidReferences} referințe invalide găsite`,
+    details: referenceDetails || 'Toate referințele sunt corecte'
+  });
+
+  // Test 16: General Ledger Entries - Total Debit = Total Credit
   let totalTransactionDebit = 0;
   let totalTransactionCredit = 0;
   transactions.forEach(transaction => {
@@ -253,6 +383,292 @@ export const validateSaftXml = (xmlContent: string): ValidationReport => {
     status: transactionDiff < 0.01 ? 'pass' : 'fail',
     message: transactionDiff < 0.01 ? 'Rulajele debitoare și creditoare sunt egale' : 'Rulajele debitoare și creditoare NU sunt egale',
     details: `Total Debit: ${totalTransactionDebit.toFixed(2)} RON, Total Credit: ${totalTransactionCredit.toFixed(2)} RON, Diferență: ${transactionDiff.toFixed(2)} RON`
+  });
+
+  // Test 17: Account References Validity in Transactions
+  const accountIds = new Set<string>();
+  accounts.forEach(account => {
+    const accId = getValue(account, 'AccountID');
+    if (accId) accountIds.add(accId);
+  });
+
+  let invalidAccountRefs = 0;
+  let accountRefDetails = '';
+  transactions.forEach((transaction, index) => {
+    const lines = transaction.querySelectorAll('Line');
+    lines.forEach(line => {
+      const accountID = getValue(line, 'AccountID');
+      if (accountID && !accountIds.has(accountID)) {
+        invalidAccountRefs++;
+        accountRefDetails += `Tranzacție ${index + 1}: Cont ${accountID} nu există în plan conturi. `;
+      }
+    });
+  });
+  results.push({
+    testNumber: 17,
+    testName: 'Validitate Referințe Conturi',
+    status: invalidAccountRefs === 0 ? 'pass' : 'fail',
+    message: invalidAccountRefs === 0 ? 'Toate conturile din tranzacții există în planul de conturi' : `${invalidAccountRefs} referințe invalide către conturi`,
+    details: accountRefDetails || 'Toate referințele sunt corecte'
+  });
+
+  // Test 18: Transaction Date Validity
+  const fiscalYearStart = getValue(xmlDoc.querySelector('Header'), 'FiscalYear');
+  const startDate = getValue(xmlDoc.querySelector('Header'), 'StartDate');
+  const endDate = getValue(xmlDoc.querySelector('Header'), 'EndDate');
+  let invalidDates = 0;
+  let dateDetails = '';
+  
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    transactions.forEach((transaction, index) => {
+      const transDate = getValue(transaction, 'TransactionDate');
+      if (transDate) {
+        const tDate = new Date(transDate);
+        if (tDate < start || tDate > end) {
+          invalidDates++;
+          dateDetails += `Tranzacție ${index + 1}: Data ${transDate} în afara perioadei ${startDate} - ${endDate}. `;
+        }
+      }
+    });
+  }
+  results.push({
+    testNumber: 18,
+    testName: 'Validitate Date Tranzacții',
+    status: invalidDates === 0 ? 'pass' : 'fail',
+    message: invalidDates === 0 ? 'Toate datele tranzacțiilor sunt în perioada raportată' : `${invalidDates} tranzacții cu date invalide`,
+    details: dateDetails || `Perioadă raportată: ${startDate} - ${endDate}`
+  });
+
+  // Test 19: Tax Code References Validity
+  const taxCodes = new Set<string>();
+  taxEntries.forEach(entry => {
+    const code = getValue(entry, 'TaxCode');
+    if (code) taxCodes.add(code);
+  });
+
+  let invalidTaxRefs = 0;
+  let taxRefDetails = '';
+  transactions.forEach((transaction, index) => {
+    const lines = transaction.querySelectorAll('Line');
+    lines.forEach(line => {
+      const taxCode = getValue(line.querySelector('TaxInformation'), 'TaxCode');
+      if (taxCode && !taxCodes.has(taxCode)) {
+        invalidTaxRefs++;
+        taxRefDetails += `Tranzacție ${index + 1}: Cod taxă ${taxCode} nu există în tabel. `;
+      }
+    });
+  });
+  results.push({
+    testNumber: 19,
+    testName: 'Validitate Coduri Taxă',
+    status: invalidTaxRefs === 0 ? 'pass' : 'fail',
+    message: invalidTaxRefs === 0 ? 'Toate codurile de taxă sunt valide' : `${invalidTaxRefs} referințe invalide către coduri taxă`,
+    details: taxRefDetails || 'Toate codurile taxă sunt corecte'
+  });
+
+  // Test 20: Transaction Lines Completeness
+  let incompleteLines = 0;
+  let lineDetails = '';
+  transactions.forEach((transaction, index) => {
+    const transID = getValue(transaction, 'TransactionID');
+    const lines = transaction.querySelectorAll('Line');
+    lines.forEach((line, lineIndex) => {
+      const recordID = getValue(line, 'RecordID');
+      const accountID = getValue(line, 'AccountID');
+      const debitAmount = getValue(line, 'DebitAmount');
+      const creditAmount = getValue(line, 'CreditAmount');
+      
+      if (!recordID || !accountID || (!debitAmount && !creditAmount)) {
+        incompleteLines++;
+        lineDetails += `Tranzacție ${transID || index + 1}, Linie ${lineIndex + 1}: date incomplete. `;
+      }
+    });
+  });
+  results.push({
+    testNumber: 20,
+    testName: 'Completitudine Linii Tranzacții',
+    status: incompleteLines === 0 ? 'pass' : 'fail',
+    message: incompleteLines === 0 ? 'Toate liniile tranzacțiilor sunt complete' : `${incompleteLines} linii incomplete`,
+    details: lineDetails || 'Toate liniile sunt complete'
+  });
+
+  // Test 21: Journal ID Consistency
+  const journals = xmlDoc.querySelectorAll('GeneralLedgerEntries Journal');
+  let invalidJournals = 0;
+  let journalDetails = '';
+  journals.forEach((journal, index) => {
+    const journalID = getValue(journal, 'JournalID');
+    const description = getValue(journal, 'Description');
+    
+    if (!journalID || !description) {
+      invalidJournals++;
+      journalDetails += `Jurnal ${index + 1}: date incomplete (JournalID sau Description lipsă). `;
+    }
+  });
+  results.push({
+    testNumber: 21,
+    testName: 'Consistență Jurnale',
+    status: invalidJournals === 0 ? 'pass' : 'fail',
+    message: invalidJournals === 0 ? `${journals.length} jurnale validate cu succes` : `${invalidJournals} jurnale cu date incomplete`,
+    details: journalDetails || `Total jurnale: ${journals.length}`
+  });
+
+  // Test 22: Header Completeness
+  const header = xmlDoc.querySelector('Header');
+  const auditFileVersion = getValue(header, 'AuditFileVersion');
+  const companyID = getValue(header, 'CompanyID');
+  const taxRegistrationNumber = getValue(header, 'TaxRegistrationNumber');
+  const taxAccountingBasis = getValue(header, 'TaxAccountingBasis');
+  const companyName = getValue(header, 'CompanyName');
+  const businessName = getValue(header, 'BusinessName');
+  
+  const headerComplete = auditFileVersion && companyID && taxRegistrationNumber && 
+                        taxAccountingBasis && companyName && businessName;
+  results.push({
+    testNumber: 22,
+    testName: 'Completitudine Header',
+    status: headerComplete ? 'pass' : 'fail',
+    message: headerComplete ? 'Header complet cu toate câmpurile obligatorii' : 'Header incomplet - câmpuri obligatorii lipsă',
+    details: `AuditFileVersion: ${auditFileVersion || 'LIPSĂ'}, CompanyID: ${companyID || 'LIPSĂ'}, TaxRegistrationNumber: ${taxRegistrationNumber || 'LIPSĂ'}`
+  });
+
+  // Test 23: Currency Code Validity
+  const headerCurrency = getValue(header, 'CurrencyCode');
+  let invalidCurrencies = 0;
+  let currencyDetails = '';
+  
+  transactions.forEach((transaction, index) => {
+    const lines = transaction.querySelectorAll('Line');
+    lines.forEach(line => {
+      const currency = getValue(line, 'CurrencyCode');
+      if (currency && currency !== headerCurrency && currency !== 'RON') {
+        invalidCurrencies++;
+        currencyDetails += `Tranzacție ${index + 1}: Monedă ${currency} diferită de moneda raportării. `;
+      }
+    });
+  });
+  results.push({
+    testNumber: 23,
+    testName: 'Validitate Coduri Monedă',
+    status: invalidCurrencies === 0 ? 'pass' : 'fail',
+    message: invalidCurrencies === 0 ? 'Toate codurile de monedă sunt valide' : `${invalidCurrencies} coduri monedă invalide`,
+    details: currencyDetails || `Moneda raportării: ${headerCurrency || 'RON'}`
+  });
+
+  // Test 24: Tax Amounts Consistency
+  let inconsistentTaxAmounts = 0;
+  let taxAmountDetails = '';
+  
+  transactions.forEach((transaction, index) => {
+    const lines = transaction.querySelectorAll('Line');
+    lines.forEach((line, lineIndex) => {
+      const taxInfo = line.querySelector('TaxInformation');
+      if (taxInfo) {
+        const taxType = getValue(taxInfo, 'TaxType');
+        const taxCode = getValue(taxInfo, 'TaxCode');
+        const taxPercentage = parseFloat(getValue(taxInfo, 'TaxPercentage') || '0');
+        const taxBase = parseFloat(getValue(taxInfo, 'TaxBase') || '0');
+        const taxAmount = parseFloat(getValue(taxInfo, 'TaxAmount') || '0');
+        
+        if (taxBase > 0 && taxPercentage > 0) {
+          const calculatedTax = (taxBase * taxPercentage) / 100;
+          const diff = Math.abs(calculatedTax - taxAmount);
+          if (diff > 0.02) {
+            inconsistentTaxAmounts++;
+            taxAmountDetails += `Tranzacție ${index + 1}, Linie ${lineIndex + 1}: Taxă calculată ${calculatedTax.toFixed(2)} ≠ Taxă declarată ${taxAmount.toFixed(2)}. `;
+          }
+        }
+      }
+    });
+  });
+  results.push({
+    testNumber: 24,
+    testName: 'Consistență Sume Taxe',
+    status: inconsistentTaxAmounts === 0 ? 'pass' : 'fail',
+    message: inconsistentTaxAmounts === 0 ? 'Toate sumele de taxe sunt consistente' : `${inconsistentTaxAmounts} inconsistențe în calcul taxe`,
+    details: taxAmountDetails || 'Toate calculele de taxe sunt corecte'
+  });
+
+  // Test 25: Source Documents References
+  let missingSourceDocs = 0;
+  let sourceDocDetails = '';
+  
+  transactions.forEach((transaction, index) => {
+    const lines = transaction.querySelectorAll('Line');
+    lines.forEach((line, lineIndex) => {
+      const sourceDocID = getValue(line, 'SourceDocumentID');
+      // For Romania, source documents are typically required
+      if (!sourceDocID && (getValue(line, 'DebitAmount') || getValue(line, 'CreditAmount'))) {
+        missingSourceDocs++;
+        sourceDocDetails += `Tranzacție ${index + 1}, Linie ${lineIndex + 1}: Lipsă document sursă. `;
+      }
+    });
+  });
+  results.push({
+    testNumber: 25,
+    testName: 'Referințe Documente Sursă',
+    status: missingSourceDocs === 0 ? 'pass' : 'warning',
+    message: missingSourceDocs === 0 ? 'Toate liniile au documente sursă' : `${missingSourceDocs} linii fără document sursă`,
+    details: sourceDocDetails || 'Toate liniile au documente sursă'
+  });
+
+  // Test 26: Balance Formula Verification (Opening + Debit - Credit = Closing)
+  let balanceFormulaErrors = 0;
+  let balanceFormulaDetails = '';
+  
+  accounts.forEach((account, index) => {
+    const accountID = getValue(account, 'AccountID');
+    const openingDebit = parseFloat(getValue(account, 'OpeningDebitBalance') || '0');
+    const openingCredit = parseFloat(getValue(account, 'OpeningCreditBalance') || '0');
+    const closingDebit = parseFloat(getValue(account, 'ClosingDebitBalance') || '0');
+    const closingCredit = parseFloat(getValue(account, 'ClosingCreditBalance') || '0');
+    
+    // Calculate movements for this account
+    let accountDebits = 0;
+    let accountCredits = 0;
+    transactions.forEach(transaction => {
+      const lines = transaction.querySelectorAll('Line');
+      lines.forEach(line => {
+        if (getValue(line, 'AccountID') === accountID) {
+          accountDebits += parseFloat(getValue(line, 'DebitAmount') || '0');
+          accountCredits += parseFloat(getValue(line, 'CreditAmount') || '0');
+        }
+      });
+    });
+    
+    // Verify balance formula
+    const calculatedClosingDebit = Math.max(0, openingDebit + accountDebits - openingCredit - accountCredits);
+    const calculatedClosingCredit = Math.max(0, openingCredit + accountCredits - openingDebit - accountDebits);
+    
+    const debitDiff = Math.abs(calculatedClosingDebit - closingDebit);
+    const creditDiff = Math.abs(calculatedClosingCredit - closingCredit);
+    
+    if (debitDiff > 0.02 || creditDiff > 0.02) {
+      balanceFormulaErrors++;
+      balanceFormulaDetails += `Cont ${accountID}: Sold calculat (D:${calculatedClosingDebit.toFixed(2)}, C:${calculatedClosingCredit.toFixed(2)}) ≠ Sold declarat (D:${closingDebit.toFixed(2)}, C:${closingCredit.toFixed(2)}). `;
+    }
+  });
+  results.push({
+    testNumber: 26,
+    testName: 'Verificare Formulă Solduri',
+    status: balanceFormulaErrors === 0 ? 'pass' : 'fail',
+    message: balanceFormulaErrors === 0 ? 'Formula soldurilor este corectă pentru toate conturile' : `${balanceFormulaErrors} conturi cu solduri incorecte`,
+    details: balanceFormulaDetails || 'Toate soldurile respectă formula: Sold Inițial + Rulaj Debitor - Rulaj Creditor = Sold Final'
+  });
+
+  // Test 27: Number of Entries Consistency
+  const numberOfEntries = xmlDoc.querySelector('Header NumberOfEntries');
+  const declaredEntries = parseInt(getValue(numberOfEntries?.parentElement, 'NumberOfEntries') || '0');
+  const actualEntries = transactions.length;
+  results.push({
+    testNumber: 27,
+    testName: 'Consistență Număr Înregistrări',
+    status: declaredEntries === actualEntries ? 'pass' : 'fail',
+    message: declaredEntries === actualEntries ? `Numărul declarat (${declaredEntries}) corespunde cu numărul real de înregistrări` : `Discrepanță: Declarat ${declaredEntries}, Real ${actualEntries}`,
+    details: `Înregistrări declarate în header: ${declaredEntries}, Înregistrări găsite: ${actualEntries}`
   });
 
   // Calculate summary

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Zap, Building2, Rocket, Crown } from "lucide-react";
+import { Check, X, Building2, Rocket, Crown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -12,84 +12,65 @@ const Pricing = () => {
 
   const plans = [
     {
-      name: "Gratuit",
-      icon: Zap,
-      description: "Perfect pentru startup-uri și teste",
-      monthlyPrice: 0,
-      annualPrice: 0,
-      badge: null,
-      features: [
-        { text: "5 facturi/lună", included: true },
-        { text: "1 utilizator", included: true },
-        { text: "Generare PDF facturi", included: true },
-        { text: "Gestionare clienți", included: true },
-        { text: "Rapoarte de bază", included: true },
-        { text: "e-Factura (ANAF)", included: false },
-        { text: "SAF-T (D406)", included: false },
-        { text: "Gestiune stocuri", included: false },
-        { text: "Suport prioritar", included: false },
-      ],
-      cta: "Începe gratuit",
-      popular: false,
-    },
-    {
       name: "Starter",
       icon: Building2,
-      description: "Pentru întreprinderi mici și PFA",
-      monthlyPrice: 19,
-      annualPrice: 199,
-      badge: "Recomandat",
+      description: "Perfect pentru mici afaceri și PFA-uri",
+      monthlyPrice: 29,
+      annualPrice: 299,
+      teamMembers: 3,
+      badge: null,
       features: [
-        { text: "Facturi nelimitate", included: true },
-        { text: "3 utilizatori", included: true },
-        { text: "Generare PDF + XML", included: true },
+        { text: "Până la 3 membri în echipă", included: true },
+        { text: "50 facturi/lună", included: true },
         { text: "Gestionare clienți nelimitați", included: true },
-        { text: "Rapoarte avansate", included: true },
+        { text: "Generare PDF + XML", included: true },
         { text: "e-Factura (ANAF) inclusă", included: true },
         { text: "SAF-T (D406) automat", included: true },
-        { text: "Gestiune stocuri de bază", included: true },
+        { text: "Rapoarte de bază", included: true },
         { text: "Suport email", included: true },
       ],
       cta: "Începe acum",
-      popular: true,
+      popular: false,
     },
     {
       name: "Professional",
       icon: Rocket,
-      description: "Pentru afaceri în creștere",
-      monthlyPrice: 49,
-      annualPrice: 499,
-      badge: null,
+      description: "Pentru afaceri în creștere cu echipe mari",
+      monthlyPrice: 79,
+      annualPrice: 799,
+      teamMembers: 10,
+      badge: "Recomandat",
       features: [
+        { text: "Până la 10 membri în echipă", included: true },
+        { text: "Facturi nelimitate", included: true },
         { text: "Tot din Starter +", included: true },
-        { text: "10 utilizatori", included: true },
-        { text: "API acces complet", included: true },
         { text: "Gestiune stocuri avansată", included: true },
-        { text: "Producție & Rețete", included: true },
+        { text: "Rapoarte avansate", included: true },
+        { text: "API acces complet", included: true },
         { text: "Multi-locație", included: true },
-        { text: "Rapoarte personalizabile", included: true },
         { text: "Backup automat zilnic", included: true },
-        { text: "Suport prioritar 24/7", included: true },
+        { text: "Suport prioritar", included: true },
       ],
       cta: "Alege Professional",
-      popular: false,
+      popular: true,
     },
     {
       name: "Enterprise",
       icon: Crown,
-      description: "Pentru corporații și companii mari",
+      description: "Pentru corporații cu echipe extinse",
       monthlyPrice: null,
       annualPrice: null,
+      teamMembers: null,
       badge: "Personalizat",
       features: [
+        { text: "Membri nelimitați în echipă", included: true },
+        { text: "Facturi nelimitate", included: true },
         { text: "Tot din Professional +", included: true },
-        { text: "Utilizatori nelimitați", included: true },
         { text: "White-label branding", included: true },
         { text: "Integrări personalizate", included: true },
         { text: "Manager de cont dedicat", included: true },
         { text: "Training pe loc", included: true },
         { text: "SLA garantat 99.9%", included: true },
-        { text: "Raportare personalizată", included: true },
         { text: "Suport dedicat 24/7", included: true },
       ],
       cta: "Contactează vânzări",
@@ -184,7 +165,7 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 max-w-6xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (
@@ -208,6 +189,15 @@ const Pricing = () => {
                     <CardTitle>{plan.name}</CardTitle>
                   </div>
                   <CardDescription className="min-h-[48px]">{plan.description}</CardDescription>
+                  
+                  {/* Team Members Badge */}
+                  <div className="mt-4">
+                    <Badge variant="secondary" className="text-sm font-semibold">
+                      {plan.teamMembers 
+                        ? `${plan.teamMembers} ${plan.teamMembers === 1 ? 'membru' : 'membri'} în echipă` 
+                        : 'Membri nelimitați'}
+                    </Badge>
+                  </div>
                 </CardHeader>
 
                 <CardContent className="flex-1">

@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook } from "lucide-react";
+import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook, TrendingUp } from "lucide-react";
 import { WebhookEventsManager } from "@/components/WebhookEventsManager";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { PlanStatsCards } from "@/components/admin/PlanStatsCards";
+import { RevenueAnalytics } from "@/components/admin/RevenueAnalytics";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -263,6 +264,10 @@ export default function AdminDashboard() {
               <UsersIcon className="h-4 w-4" />
               Utilizatori & Planuri
             </TabsTrigger>
+            <TabsTrigger value="revenue" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Analiză Venituri
+            </TabsTrigger>
             <TabsTrigger value="payments" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               Configurare Stripe
@@ -285,6 +290,10 @@ export default function AdminDashboard() {
                 <UsersTable users={users} onRefresh={loadAllData} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="revenue" className="space-y-4">
+            <RevenueAnalytics />
           </TabsContent>
 
           <TabsContent value="payments" className="space-y-4">

@@ -4,24 +4,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, LogOut, Users, Shield, Crown, CreditCard, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
+import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook } from "lucide-react";
 import { WebhookEventsManager } from "@/components/WebhookEventsManager";
+import { UsersTable } from "@/components/admin/UsersTable";
+import { PlanStatsCards } from "@/components/admin/PlanStatsCards";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [accessRequests, setAccessRequests] = useState<any[]>([]);
-  const [userRoles, setUserRoles] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    freeUsers: 0,
+    starterUsers: 0,
+    professionalUsers: 0,
+    enterpriseUsers: 0,
+    totalInvoicesThisMonth: 0,
+  });
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
-  const [subscriptions, setSubscriptions] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [stripeApiKey, setStripeApiKey] = useState("");
   const [stripePublishableKey, setStripePublishableKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
@@ -62,26 +66,85 @@ export default function AdminDashboard() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [profilesData, requestsData, rolesData, configData, subsData, transData] = await Promise.all([
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-        supabase.from("access_requests").select("*").order("created_at", { ascending: false }),
-        supabase.from("user_roles").select("*").order("created_at", { ascending: false }),
-        supabase.from("payment_gateway_config").select("*").single(),
-        supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
-        supabase.from("payment_transactions").select("*").order("created_at", { ascending: false }),
-      ]);
+      // Get current month start date
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
-      setProfiles(profilesData.data || []);
-      setAccessRequests(requestsData.data || []);
-      setUserRoles(rolesData.data || []);
-      setPaymentConfig(configData.data);
-      setSubscriptions(subsData.data || []);
-      setTransactions(transData.data || []);
-      
-      if (configData.data) {
-        setStripePublishableKey(configData.data.publishable_key || "");
+      // Load all profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // For each user, get their invoice count this month and member count
+      const usersWithStats = await Promise.all(
+        (profilesData || []).map(async (profile) => {
+          const [invoiceResult, memberResult, totalInvoiceResult] = await Promise.all([
+            supabase
+              .from("invoices")
+              .select("*", { count: "exact", head: true })
+              .eq("user_id", profile.id)
+              .gte("created_at", startOfMonth.toISOString()),
+            supabase
+              .from("workspace_members")
+              .select("*", { count: "exact", head: true })
+              .eq("workspace_owner_id", profile.id),
+            supabase
+              .from("invoices")
+              .select("*", { count: "exact", head: true })
+              .eq("user_id", profile.id),
+          ]);
+
+          return {
+            ...profile,
+            invoices_this_month: invoiceResult.count || 0,
+            member_count: memberResult.count || 0,
+            invoice_count: totalInvoiceResult.count || 0,
+          };
+        })
+      );
+
+      setUsers(usersWithStats);
+
+      // Calculate stats
+      const planCounts = usersWithStats.reduce(
+        (acc, user) => {
+          const plan = user.payment_plan?.toLowerCase() || "free";
+          if (plan === "starter") acc.starterUsers++;
+          else if (plan === "professional") acc.professionalUsers++;
+          else if (plan === "enterprise") acc.enterpriseUsers++;
+          else acc.freeUsers++;
+          return acc;
+        },
+        { freeUsers: 0, starterUsers: 0, professionalUsers: 0, enterpriseUsers: 0 }
+      );
+
+      const totalInvoicesThisMonth = usersWithStats.reduce(
+        (sum, user) => sum + (user.invoices_this_month || 0),
+        0
+      );
+
+      setStats({
+        totalUsers: usersWithStats.length,
+        ...planCounts,
+        totalInvoicesThisMonth,
+      });
+
+      // Load payment config
+      const { data: configData } = await supabase
+        .from("payment_gateway_config")
+        .select("*")
+        .single();
+
+      setPaymentConfig(configData);
+      if (configData) {
+        setStripePublishableKey(configData.publishable_key || "");
       }
     } catch (error: any) {
+      console.error("Error loading data:", error);
       toast.error("Eroare la încărcarea datelor", { description: error.message });
     } finally {
       setLoading(false);
@@ -168,12 +231,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const totalRevenue = transactions
-    .filter(t => t.status === "succeeded")
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-  const failedPayments = transactions.filter(t => t.status === "failed").length;
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -188,7 +245,7 @@ export default function AdminDashboard() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Panou Administrare</h1>
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
@@ -197,196 +254,35 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Utilizatori</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{profiles.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Roluri Active</CardTitle>
-              <Crown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{userRoles.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Venituri</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Plăți Eșuate</CardTitle>
-              <AlertCircle className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{failedPayments}</div>
-            </CardContent>
-          </Card>
-        </div>
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        <PlanStatsCards stats={stats} />
 
-        <Tabs defaultValue="profiles" className="space-y-4">
+        <Tabs defaultValue="users" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="profiles">Utilizatori & Planuri</TabsTrigger>
-            <TabsTrigger value="roles">Roluri</TabsTrigger>
-            <TabsTrigger value="requests">Cereri Acces</TabsTrigger>
-            <TabsTrigger value="payments">Plăți</TabsTrigger>
-            <TabsTrigger value="webhooks">Webhooks & Retry</TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <UsersIcon className="h-4 w-4" />
+              Utilizatori & Planuri
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Configurare Stripe
+            </TabsTrigger>
+            <TabsTrigger value="webhooks" className="flex items-center gap-2">
+              <Webhook className="h-4 w-4" />
+              Webhooks
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profiles" className="space-y-4">
+          <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Utilizatori & Planuri de Plată</CardTitle>
-                <CardDescription>Gestionează utilizatorii și planurile lor de plată</CardDescription>
+                <CardTitle>Gestionare Utilizatori</CardTitle>
+                <CardDescription>
+                  Vizualizează și gestionează utilizatorii, planurile lor și utilizarea resurselor
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Companie</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>CUI/CIF</TableHead>
-                      <TableHead>Plan Plată</TableHead>
-                      <TableHead>Data Creare</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {profiles.map((profile) => (
-                      <TableRow key={profile.id}>
-                        <TableCell className="font-medium">{profile.company_name}</TableCell>
-                        <TableCell>{profile.email}</TableCell>
-                        <TableCell>{profile.cui_cif || "-"}</TableCell>
-                        <TableCell>
-                          <Select
-                            value={profile.payment_plan || "free"}
-                            onValueChange={(value) => updatePaymentPlan(profile.id, value)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="free">Free</SelectItem>
-                              <SelectItem value="basic">Basic</SelectItem>
-                              <SelectItem value="pro">Pro</SelectItem>
-                              <SelectItem value="enterprise">Enterprise</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>{new Date(profile.created_at).toLocaleDateString("ro-RO")}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="roles" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Roluri Utilizatori</CardTitle>
-                <CardDescription>Editează rolurile utilizatorilor din sistem</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Rol</TableHead>
-                      <TableHead>Data Creare</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {userRoles.map((role) => {
-                      const profile = profiles.find(p => p.id === role.user_id);
-                      return (
-                        <TableRow key={role.id}>
-                          <TableCell className="font-mono text-xs">{role.user_id}</TableCell>
-                          <TableCell>{profile?.email || "-"}</TableCell>
-                          <TableCell>
-                            <Select
-                              value={role.role}
-                              onValueChange={(value) => updateUserRole(role.user_id, value)}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="business">Business</SelectItem>
-                                <SelectItem value="accountant">Accountant</SelectItem>
-                                <SelectItem value="owner">Owner</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>{new Date(role.created_at).toLocaleDateString("ro-RO")}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-
-          <TabsContent value="requests" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cereri de Acces</CardTitle>
-                <CardDescription>Solicitări de acces contabil</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Email Business</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Data Solicitare</TableHead>
-                      <TableHead>Data Răspuns</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {accessRequests.map((request) => (
-                      <TableRow key={request.id}>
-                        <TableCell>{request.business_owner_email}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              request.status === "accepted"
-                                ? "default"
-                                : request.status === "rejected"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {request.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(request.requested_at).toLocaleDateString("ro-RO")}</TableCell>
-                        <TableCell>
-                          {request.responded_at
-                            ? new Date(request.responded_at).toLocaleDateString("ro-RO")
-                            : "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <UsersTable users={users} onRefresh={loadAllData} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -444,148 +340,6 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Abonamente Utilizatori</CardTitle>
-                <CardDescription>Status abonamente pentru toți utilizatorii</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Început Perioadă</TableHead>
-                      <TableHead>Sfârșit Perioadă</TableHead>
-                      <TableHead>Se Anulează</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {subscriptions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
-                          Nu există abonamente înregistrate
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      subscriptions.map((sub) => (
-                        <TableRow key={sub.id}>
-                          <TableCell className="font-mono text-xs">{sub.user_id.substring(0, 8)}...</TableCell>
-                          <TableCell>{sub.plan_name}</TableCell>
-                          <TableCell>
-                            <Badge variant={sub.status === "active" ? "default" : "secondary"}>
-                              {sub.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {sub.current_period_start
-                              ? new Date(sub.current_period_start).toLocaleDateString("ro-RO")
-                              : "-"}
-                          </TableCell>
-                          <TableCell>
-                            {sub.current_period_end
-                              ? new Date(sub.current_period_end).toLocaleDateString("ro-RO")
-                              : "-"}
-                          </TableCell>
-                          <TableCell>{sub.cancel_at_period_end ? "Da" : "Nu"}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Istoric Tranzacții</CardTitle>
-                  <CardDescription>Ultimele tranzacții de plată</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User ID</TableHead>
-                        <TableHead>Sumă</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Data</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {transactions.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">
-                            Nu există tranzacții înregistrate
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        transactions.slice(0, 10).map((trans) => (
-                          <TableRow key={trans.id}>
-                            <TableCell className="font-mono text-xs">{trans.user_id.substring(0, 8)}...</TableCell>
-                            <TableCell>${parseFloat(trans.amount).toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  trans.status === "succeeded"
-                                    ? "default"
-                                    : trans.status === "failed"
-                                    ? "destructive"
-                                    : "secondary"
-                                }
-                              >
-                                {trans.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{new Date(trans.created_at).toLocaleDateString("ro-RO")}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Plăți Eșuate</CardTitle>
-                  <CardDescription>Tranzacții cu probleme</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User ID</TableHead>
-                        <TableHead>Sumă</TableHead>
-                        <TableHead>Data</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {transactions.filter(t => t.status === "failed").length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground">
-                            Nu există plăți eșuate
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        transactions
-                          .filter(t => t.status === "failed")
-                          .slice(0, 10)
-                          .map((trans) => (
-                            <TableRow key={trans.id}>
-                              <TableCell className="font-mono text-xs">{trans.user_id.substring(0, 8)}...</TableCell>
-                              <TableCell>${parseFloat(trans.amount).toFixed(2)}</TableCell>
-                              <TableCell>{new Date(trans.created_at).toLocaleDateString("ro-RO")}</TableCell>
-                            </TableRow>
-                          ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
 
           <TabsContent value="webhooks" className="space-y-4">

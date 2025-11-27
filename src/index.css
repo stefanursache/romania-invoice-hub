@@ -2,6 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Scrollbar styling for mobile tables */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-primary/20 rounded-full;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/30;
+  }
+}
+
+/* Mobile-friendly touch targets */
+@layer base {
+  @media (max-width: 768px) {
+    button, a, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+  
+  /* Better mobile spacing */
+  @media (max-width: 768px) {
+    body {
+      -webkit-tap-highlight-color: transparent;
+    }
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

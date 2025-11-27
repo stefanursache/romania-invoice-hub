@@ -224,19 +224,20 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile menu button */}
+      {/* Mobile menu button - improved touch target */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-card border shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-lg bg-card border shadow-lg hover:bg-accent transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center"
+        aria-label={sidebarOpen ? "Închide meniu" : "Deschide meniu"}
       >
         {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
-      {/* Sidebar */}
+      {/* Sidebar - improved mobile experience */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen w-64 bg-card border-r transition-transform lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-40 h-screen w-64 md:w-72 lg:w-64 bg-card border-r transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } overflow-y-auto`}
       >
         <div className="flex flex-col h-full p-4">
           <div className="mb-8">
@@ -251,7 +252,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             {/* Company switcher removed from sidebar - now only in top breadcrumb */}
           </div>
 
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -261,36 +262,38 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   key={item.href}
                   to={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-lg transition-colors min-h-[48px] ${
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "hover:bg-muted active:bg-muted/80"
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="font-medium truncate">{item.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              {userRole === "accountant" && <NotificationBadge />}
+              <LanguageToggle />
+            </div>
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="flex-1 justify-start gap-3"
+              className="w-full justify-start gap-3 min-h-[48px]"
             >
               <LogOut className="h-5 w-5" />
               {t('nav.signOut')}
             </Button>
-            {userRole === "accountant" && <NotificationBadge />}
-            <LanguageToggle />
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="lg:ml-64 min-h-screen">
+      {/* Main content - improved mobile padding */}
+      <main className="lg:ml-64 min-h-screen pb-safe">
         {/* Breadcrumb Navigation for Accountants */}
         {userRole === "accountant" && (
           <div className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20">
@@ -358,7 +361,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
         )}
         
-        <div className="p-4 lg:p-8 pt-20 lg:pt-8">
+        <div className="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 pb-8">
           {children}
         </div>
       </main>

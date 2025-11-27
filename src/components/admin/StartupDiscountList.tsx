@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -163,8 +164,69 @@ export function StartupDiscountList() {
           </div>
         </div>
 
-        <div className="rounded-md border">
-          <Table>
+        {/* Mobile: Card layout */}
+        <div className="md:hidden space-y-4">
+          {filteredUsers.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nu au fost găsiți utilizatori
+              </CardContent>
+            </Card>
+          ) : (
+            filteredUsers.map((user) => (
+              <Card key={user.id} className="overflow-hidden">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold truncate">{user.company_name}</h3>
+                      <p className="text-sm text-muted-foreground truncate">{user.email || "-"}</p>
+                    </div>
+                    {getStatusBadge(user.discount_status)}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Cont creat</p>
+                      <p className="font-medium">{new Date(user.created_at).toLocaleDateString("ro-RO")}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Expirare</p>
+                      <p className="font-medium">{getExpirationInfo(user.discount_status)}</p>
+                    </div>
+                  </div>
+                  
+                  {user.discount_status?.notes && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">Note:</p>
+                      <p className="text-sm line-clamp-2">{user.discount_status.notes}</p>
+                    </div>
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full min-h-[44px]"
+                    onClick={() =>
+                      setSelectedUser({
+                        userId: user.id,
+                        userName: user.company_name,
+                        currentStatus: user.discount_status,
+                      })
+                    }
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Gestionează
+                  </Button>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop: Table layout */}
+        <div className="hidden md:block rounded-md border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Companie</TableHead>
@@ -224,6 +286,7 @@ export function StartupDiscountList() {
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">

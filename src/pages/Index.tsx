@@ -147,8 +147,8 @@ const Index = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-32 pb-20 md:pt-40 md:pb-28">
+      {/* Hero Section - mobile optimized */}
+      <section className="container mx-auto px-4 pt-24 pb-16 sm:pt-32 sm:pb-20 md:pt-40 md:pb-28">
         <div className="max-w-6xl mx-auto">
           <div className="text-center space-y-8 animate-fade-in">
             <Badge variant="secondary" className="gap-2 px-4 py-2 text-sm">
@@ -156,21 +156,21 @@ const Index = () => {
               Soluție completă pentru afaceri românești
             </Badge>
             
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
-              Facturare inteligentă<br />
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
+              Facturare inteligentă<br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">
                 pentru România
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Automatizează facturarea, generează eFactura pentru ANAF și controlează cash-flow-ul 
               afacerii tale. Totul într-o singură platformă modernă.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Link to="/auth?mode=signup">
-                <Button size="lg" className="text-lg px-8 h-14 group shadow-lg hover:shadow-xl transition-all">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center pt-4">
+              <Link to="/auth?mode=signup" className="flex-1 sm:flex-initial">
+                <Button size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 h-12 sm:h-14 group shadow-lg hover:shadow-xl transition-all">
                   Începe acum - gratuit
                   <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Button>
@@ -178,7 +178,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="text-lg px-8 h-14"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 h-12 sm:h-14"
                 onClick={() => setDemoDialogOpen(true)}
               >
                 <Download className="mr-2 h-5 w-5" />

@@ -260,26 +260,26 @@ export default function AdminDashboard() {
         <PlanStatsCards stats={stats} />
 
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="users" className="flex items-center gap-2">
+          <TabsList className="w-full overflow-x-auto flex-wrap h-auto gap-2 p-2">
+            <TabsTrigger value="users" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <UsersIcon className="h-4 w-4" />
-              Utilizatori & Planuri
+              <span className="hidden sm:inline">Utilizatori</span>
             </TabsTrigger>
-            <TabsTrigger value="startup-discounts" className="flex items-center gap-2">
+            <TabsTrigger value="startup-discounts" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <Sparkles className="h-4 w-4" />
-              Reduceri Start-up
+              <span className="hidden sm:inline">Reduceri</span>
             </TabsTrigger>
-            <TabsTrigger value="revenue" className="flex items-center gap-2">
+            <TabsTrigger value="revenue" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <TrendingUp className="h-4 w-4" />
-              Analiză Venituri
+              <span className="hidden sm:inline">Venituri</span>
             </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2">
+            <TabsTrigger value="payments" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <CreditCard className="h-4 w-4" />
-              Configurare Stripe
+              <span className="hidden sm:inline">Stripe</span>
             </TabsTrigger>
-            <TabsTrigger value="webhooks" className="flex items-center gap-2">
+            <TabsTrigger value="webhooks" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <Webhook className="h-4 w-4" />
-              Webhooks
+              <span className="hidden sm:inline">Webhooks</span>
             </TabsTrigger>
           </TabsList>
 

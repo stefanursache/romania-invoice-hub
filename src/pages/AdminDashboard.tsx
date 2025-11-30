@@ -14,6 +14,7 @@ import { UsersTable } from "@/components/admin/UsersTable";
 import { PlanStatsCards } from "@/components/admin/PlanStatsCards";
 import { RevenueAnalytics } from "@/components/admin/RevenueAnalytics";
 import { StartupDiscountList } from "@/components/admin/StartupDiscountList";
+import { StripePlanManager } from "@/components/admin/StripePlanManager";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -371,6 +372,8 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+            
+            <StripePlanManager />
           </TabsContent>
 
           <TabsContent value="webhooks" className="space-y-4">

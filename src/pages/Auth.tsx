@@ -21,6 +21,7 @@ const emailSchema = z.string().email("Email invalid");
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const redirectPath = searchParams.get("redirect");
   const [isLogin, setIsLogin] = useState(searchParams.get("mode") !== "signup");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -111,7 +112,10 @@ const Auth = () => {
         
         toast.success("Autentificare reușită!");
         
-        if (roleData?.role === "accountant") {
+        // Check for redirect parameter first
+        if (redirectPath) {
+          navigate(redirectPath);
+        } else if (roleData?.role === "accountant") {
           navigate("/accountant-dashboard");
         } else {
           navigate("/dashboard");

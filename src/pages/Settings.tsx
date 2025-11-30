@@ -50,6 +50,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const workspaceOwnerId = searchParams.get('workspace_owner_id');
+  const tabParam = searchParams.get('tab');
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -62,6 +63,7 @@ const Settings = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [testingSpvCredentials, setTestingSpvCredentials] = useState(false);
   const [spvTestResult, setSpvTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [activeTab, setActiveTab] = useState(tabParam || "company");
   const [profile, setProfile] = useState<Profile>({
     company_name: "",
     cui_cif: "",
@@ -420,7 +422,12 @@ const Settings = () => {
           )}
         </div>
 
-        <Tabs defaultValue={isViewingClient ? "spv" : (userRole === "accountant" ? "account" : "company")} className="w-full">
+        <Tabs 
+          value={activeTab} 
+          onValueChange={setActiveTab}
+          defaultValue={isViewingClient ? "spv" : (userRole === "accountant" ? "account" : "company")} 
+          className="w-full"
+        >
           <TabsList className={`grid w-full ${
             isViewingClient 
               ? "grid-cols-2" 

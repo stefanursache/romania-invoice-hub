@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Plus, RefreshCw, CheckCircle, XCircle, TestTube, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function StripePlanManager() {
@@ -26,6 +26,11 @@ export function StripePlanManager() {
     currency: "usd",
     interval: "month",
     intervalCount: "1",
+  });
+
+  const [testCheckout, setTestCheckout] = useState({
+    priceId: "",
+    email: "",
   });
 
   useEffect(() => {
@@ -129,6 +134,37 @@ export function StripePlanManager() {
       await loadProducts();
     } catch (error: any) {
       toast.error("Error creating price", {
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createTestCheckout = async () => {
+    if (!testCheckout.priceId || !testCheckout.email) {
+      toast.error("Price and email are required");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-test-checkout", {
+        body: {
+          priceId: testCheckout.priceId,
+          email: testCheckout.email,
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data.url) {
+        toast.success("Test checkout created! Opening in new tab...");
+        window.open(data.url, '_blank');
+        setTestCheckout({ priceId: "", email: "" });
+      }
+    } catch (error: any) {
+      toast.error("Error creating test checkout", {
         description: error.message,
       });
     } finally {
@@ -275,6 +311,66 @@ export function StripePlanManager() {
             )}
             Create Price
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TestTube className="h-5 w-5" />
+            Test Subscription Checkout
+          </CardTitle>
+          <CardDescription>
+            Create a test checkout session to verify the complete subscription flow
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="testPrice">Select Price</Label>
+              <Select value={testCheckout.priceId} onValueChange={(value) => setTestCheckout({ ...testCheckout, priceId: value })}>
+                <SelectTrigger id="testPrice">
+                  <SelectValue placeholder="Select a price" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.flatMap((product) =>
+                    product.prices?.map((price: any) => (
+                      <SelectItem key={price.id} value={price.id}>
+                        {product.name} - {(price.unit_amount / 100).toFixed(2)} {price.currency.toUpperCase()} / {price.recurring?.interval}
+                      </SelectItem>
+                    )) || []
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="testEmail">Test Email</Label>
+              <Input
+                id="testEmail"
+                type="email"
+                placeholder="test@example.com"
+                value={testCheckout.email}
+                onChange={(e) => setTestCheckout({ ...testCheckout, email: e.target.value })}
+              />
+            </div>
+          </div>
+          <Button onClick={createTestCheckout} disabled={loading}>
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="mr-2 h-4 w-4" />
+            )}
+            Create Test Checkout
+          </Button>
+          <div className="rounded-md bg-muted p-4 text-sm">
+            <p className="font-medium mb-2">Testing Tips:</p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+              <li>Use Stripe test card: <code className="font-mono">4242 4242 4242 4242</code></li>
+              <li>Use any future expiry date and any 3-digit CVC</li>
+              <li>Check webhooks in the Webhooks tab after completing checkout</li>
+              <li>Verify subscription in user_subscriptions table</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
 

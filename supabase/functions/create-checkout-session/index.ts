@@ -54,6 +54,16 @@ serve(async (req) => {
     console.log('User authenticated:', user.id);
 
     const { planName, billingPeriod } = await req.json();
+    console.log('Plan details:', { planName, billingPeriod });
+
+    // Get the correct origin for redirects - use referer header
+    const referer = req.headers.get('referer') || req.headers.get('origin') || '';
+    const appOrigin = referer ? new URL(referer).origin : '';
+    console.log('App origin for redirects:', appOrigin);
+
+    if (!appOrigin) {
+      throw new Error('Could not determine application origin for redirects');
+    }
 
     // Get Stripe configuration from database
     const { data: stripeConfig, error: configError } = await supabaseClient
@@ -140,8 +150,8 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/settings?success=true`,
-      cancel_url: `${req.headers.get('origin')}/settings?canceled=true`,
+      success_url: `${appOrigin}/settings?success=true`,
+      cancel_url: `${appOrigin}/settings?canceled=true`,
       metadata: {
         user_id: user.id,
         plan_name: planName,

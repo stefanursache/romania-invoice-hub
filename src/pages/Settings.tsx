@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { PlanFeaturesWidget } from "@/components/PlanFeaturesWidget";
 import { StartupDiscountBanner } from "@/components/StartupDiscountBanner";
 import { SubscriptionManagement } from "@/components/SubscriptionManagement";
+import { PlanSelector } from "@/components/PlanSelector";
 
 interface Profile {
   company_name: string;
@@ -309,7 +310,7 @@ const Settings = () => {
     }
   };
 
-  const handleSelectPlan = async (planName: string) => {
+  const handleSelectPlan = async (planName: string, billingPeriod?: string) => {
     if (planName === 'Gratuit') {
       toast.info('Planul Gratuit este deja activ pentru toate conturile noi');
       return;
@@ -320,7 +321,7 @@ const Settings = () => {
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           planName,
-          billingPeriod: 'monthly', // Default to monthly, can be made configurable
+          billingPeriod: billingPeriod || 'monthly',
         },
       });
 
@@ -715,8 +716,60 @@ const Settings = () => {
           )}
 
           {!isViewingClient && userRole !== "accountant" && (
-            <TabsContent value="plan" className="space-y-4">
+            <TabsContent value="plan" className="space-y-6">
               <StartupDiscountBanner />
+              
+              {/* Current Plan Overview */}
+              {subscription && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Plan de abonament curent</CardTitle>
+                    <CardDescription>Detalii despre planul tău activ</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                      <div>
+                        <h3 className="text-xl font-bold capitalize">{subscription.plan_name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Status: <span className={`font-medium ${
+                            subscription.status === 'active' ? 'text-green-600' : 'text-orange-600'
+                          }`}>
+                            {subscription.status === 'active' ? 'Activ' : subscription.status}
+                          </span>
+                        </p>
+                        {subscription.current_period_end && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Se reînnoiește la: {new Date(subscription.current_period_end).toLocaleDateString('ro-RO')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Plan Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {subscription ? 'Schimbă planul' : 'Alege un plan'}
+                  </CardTitle>
+                  <CardDescription>
+                    {subscription 
+                      ? 'Actualizează sau downgrade planul tău de abonament' 
+                      : 'Selectează planul care se potrivește nevoilor tale'
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PlanSelector 
+                    currentPlan={subscription?.plan_name}
+                    onPlanSelect={handleSelectPlan}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Plan Features Details */}
               <PlanFeaturesWidget />
             </TabsContent>
           )}

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook, TrendingUp, Sparkles, Headphones } from "lucide-react";
+import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook, TrendingUp, Sparkles, Headphones, Activity } from "lucide-react";
 import { WebhookEventsManager } from "@/components/WebhookEventsManager";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { PlanStatsCards } from "@/components/admin/PlanStatsCards";
@@ -16,6 +16,7 @@ import { RevenueAnalytics } from "@/components/admin/RevenueAnalytics";
 import { StartupDiscountList } from "@/components/admin/StartupDiscountList";
 import { StripePlanManager } from "@/components/admin/StripePlanManager";
 import { SubscriptionManager } from "@/components/admin/SubscriptionManager";
+import { StripeMonitoringWidget } from "@/components/admin/StripeMonitoringWidget";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -263,6 +264,10 @@ export default function AdminDashboard() {
 
         <Tabs defaultValue="users" className="space-y-4">
           <TabsList className="w-full overflow-x-auto flex-wrap h-auto gap-2 p-2">
+            <TabsTrigger value="monitoring" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
+              <Activity className="h-4 w-4" />
+              <span className="hidden sm:inline">Monitor</span>
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <UsersIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Utilizatori</span>
@@ -288,6 +293,10 @@ export default function AdminDashboard() {
               <span className="hidden sm:inline">Webhooks</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="monitoring" className="space-y-4">
+            <StripeMonitoringWidget />
+          </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
             <Card>

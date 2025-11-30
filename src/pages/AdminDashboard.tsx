@@ -17,6 +17,7 @@ import { StartupDiscountList } from "@/components/admin/StartupDiscountList";
 import { StripePlanManager } from "@/components/admin/StripePlanManager";
 import { SubscriptionManager } from "@/components/admin/SubscriptionManager";
 import { StripeMonitoringWidget } from "@/components/admin/StripeMonitoringWidget";
+import { StripeProductSetup } from "@/components/admin/StripeProductSetup";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -282,7 +283,11 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="payments" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <CreditCard className="h-4 w-4" />
-              <span className="hidden sm:inline">Stripe</span>
+              <span className="hidden sm:inline">Stripe Config</span>
+            </TabsTrigger>
+            <TabsTrigger value="stripe-products" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden sm:inline">Produse Stripe</span>
             </TabsTrigger>
             <TabsTrigger value="support" className="flex items-center gap-2 min-h-[44px] flex-1 sm:flex-initial">
               <Headphones className="h-4 w-4" />
@@ -388,6 +393,10 @@ export default function AdminDashboard() {
             </Card>
             
             <StripePlanManager />
+          </TabsContent>
+
+          <TabsContent value="stripe-products" className="space-y-4">
+            <StripeProductSetup />
           </TabsContent>
 
           <TabsContent value="support" className="space-y-4">

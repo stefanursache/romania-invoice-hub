@@ -1,4 +1,58 @@
 project_id = "qfacqluemauiwmwwpuze"
 
+[functions.admin-cancel-subscription]
+verify_jwt = true
+
+[functions.admin-refund-payment]
+verify_jwt = true
+
+[functions.cancel-subscription]
+verify_jwt = true
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.create-stripe-price]
+verify_jwt = true
+
+[functions.create-stripe-product]
+verify_jwt = true
+
+[functions.create-test-checkout]
+verify_jwt = true
+
+[functions.extract-invoice-data]
+verify_jwt = true
+
+[functions.extract-receipt-data]
+verify_jwt = true
+
+[functions.generate-efactura-xml]
+verify_jwt = true
+
+[functions.generate-saft-xml]
+verify_jwt = true
+
+[functions.list-stripe-products]
+verify_jwt = true
+
+[functions.retry-failed-payment]
+verify_jwt = true
+
+[functions.scheduled-saft-generation]
+verify_jwt = true
+
+[functions.send-to-spv]
+verify_jwt = true
+
+[functions.setup-stripe-products]
+verify_jwt = true
+
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.test-spv-credentials]
+verify_jwt = true
+
+[functions.test-stripe-connection]
+verify_jwt = true

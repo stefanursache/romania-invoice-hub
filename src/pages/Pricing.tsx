@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,10 +7,35 @@ import { Check, X, Building2, Rocket, Crown, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
+import { PlanSelector } from "@/components/PlanSelector";
 
 const Pricing = () => {
+  const navigate = useNavigate();
   const [isAnnual, setIsAnnual] = useState(true);
   const [showStartupDiscount, setShowStartupDiscount] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setIsAuthenticated(!!session);
+    setLoading(false);
+  };
+
+  const handlePlanClick = (planName: string) => {
+    if (!isAuthenticated) {
+      // Redirect to auth with return path
+      navigate('/auth?redirect=/settings');
+    } else {
+      // Navigate to settings where they can select the plan
+      navigate('/settings?tab=plan');
+    }
+  };
 
   const plans = [
     {
@@ -271,15 +296,15 @@ const Pricing = () => {
                 </CardContent>
 
                 <CardFooter>
-                  <Link to="/auth" className="w-full">
-                    <Button
-                      className="w-full"
-                      variant={plan.popular ? "default" : "outline"}
-                      size="lg"
-                    >
-                      {plan.cta}
-                    </Button>
-                  </Link>
+                  <Button
+                    className="w-full"
+                    variant={plan.popular ? "default" : "outline"}
+                    size="lg"
+                    onClick={() => handlePlanClick(plan.name)}
+                    disabled={loading}
+                  >
+                    {loading ? "Se încarcă..." : plan.cta}
+                  </Button>
                 </CardFooter>
               </Card>
             );

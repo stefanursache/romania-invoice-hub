@@ -93,12 +93,22 @@ export function PlanSelector({ currentPlan, onPlanSelect }: PlanSelectorProps) {
 
     setProcessingPlan(planName);
     try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Trebuie să fii autentificat pentru a cumpăra un plan");
+        return;
+      }
+
+      console.log('Calling create-checkout-session with:', { planName, billingPeriod });
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: {
           planName,
           billingPeriod,
         },
       });
+
+      console.log('Response:', { data, error });
 
       if (error) throw error;
 

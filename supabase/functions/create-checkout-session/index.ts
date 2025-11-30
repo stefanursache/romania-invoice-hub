@@ -14,6 +14,8 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     console.log('Authorization header present:', !!authHeader);
+    console.log('SUPABASE_URL present:', !!Deno.env.get('SUPABASE_URL'));
+    console.log('SUPABASE_ANON_KEY present:', !!Deno.env.get('SUPABASE_ANON_KEY'));
     
     if (!authHeader) {
       throw new Error('No authorization header provided');
@@ -24,15 +26,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { 
-            Authorization: authHeader,
-            apikey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          },
+          headers: { Authorization: authHeader },
         },
       }
     );
 
     // Get user
+    console.log('Attempting to get user...');
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     
     if (userError) {

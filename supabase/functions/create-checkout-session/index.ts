@@ -12,15 +12,18 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== CREATE CHECKOUT SESSION START ===');
     const authHeader = req.headers.get('Authorization');
     console.log('Authorization header present:', !!authHeader);
     console.log('SUPABASE_URL present:', !!Deno.env.get('SUPABASE_URL'));
     console.log('SUPABASE_ANON_KEY present:', !!Deno.env.get('SUPABASE_ANON_KEY'));
     
     if (!authHeader) {
+      console.error('Missing authorization header');
       throw new Error('No authorization header provided');
     }
 
+    console.log('Creating Supabase client...');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -40,7 +43,7 @@ serve(async (req) => {
     
     if (userError) {
       console.error('Auth error:', userError);
-      throw new Error(`Authentication failed: ${userError.message}`);
+      throw new Error(`Authentication failed: ${String(userError)}`);
     }
     
     if (!user) {

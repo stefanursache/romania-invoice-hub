@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +77,56 @@ interface PlanSelectorProps {
 export function PlanSelector({ currentPlan, onPlanSelect }: PlanSelectorProps) {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
+  useEffect(() => {
+    loadStripePlans();
+  }, []);
+
+  const loadStripePlans = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("list-stripe-products");
+      
+      if (error) {
+        console.error("Error loading Stripe products:", error);
+        toast.error("Nu s-au putut încărca planurile disponibile");
+        setLoadingPlans(false);
+        return;
+      }
+
+      if (data?.products) {
+        // Map Stripe products to our plan format
+        const stripePlans: Plan[] = data.products
+          .filter((product: any) => product.active)
+          .map((product: any) => {
+            // Find monthly and annual prices
+            const monthlyPrice = product.prices?.find((p: any) => p.recurring?.interval === 'month');
+            const annualPrice = product.prices?.find((p: any) => p.recurring?.interval === 'year');
+
+            // Match with our hardcoded plan features
+            const planTemplate = plans.find(p => p.name.toLowerCase() === product.name.toLowerCase());
+
+            return {
+              name: product.name,
+              displayName: product.name,
+              monthlyPrice: monthlyPrice ? monthlyPrice.unit_amount / 100 : 0,
+              annualPrice: annualPrice ? annualPrice.unit_amount / 100 : 0,
+              currency: "RON",
+              features: planTemplate?.features || [],
+              recommended: planTemplate?.recommended || false,
+            };
+          });
+
+        setAvailablePlans(stripePlans);
+      }
+    } catch (error) {
+      console.error("Error loading plans:", error);
+      toast.error("Eroare la încărcarea planurilor");
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
 
   const handleSelectPlan = async (planName: string) => {
     if (planName === "Enterprise") {
@@ -135,6 +185,23 @@ export function PlanSelector({ currentPlan, onPlanSelect }: PlanSelectorProps) {
     return billingPeriod === "monthly" ? "/lună" : "/an";
   };
 
+  if (loadingPlans) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Se încarcă planurile...</span>
+      </div>
+    );
+  }
+
+  if (availablePlans.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Nu sunt planuri disponibile momentan.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Billing Period Toggle */}
@@ -169,7 +236,7 @@ export function PlanSelector({ currentPlan, onPlanSelect }: PlanSelectorProps) {
 
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map((plan) => {
+        {availablePlans.map((plan) => {
           const isCurrentPlan = currentPlan?.toLowerCase() === plan.name.toLowerCase();
           const isRecommended = plan.recommended;
 

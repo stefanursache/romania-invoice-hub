@@ -214,6 +214,61 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     return item?.label || t('common.page');
   };
 
+  // Generate Schema.org BreadcrumbList structured data
+  const getBreadcrumbStructuredData = () => {
+    const breadcrumbItems = [];
+    
+    if (userRole === "accountant") {
+      breadcrumbItems.push({
+        "@type": "ListItem",
+        "position": 1,
+        "name": t('breadcrumb.myCompanies'),
+        "item": `${window.location.origin}/accountant-dashboard`
+      });
+      
+      if (viewingCompany && activeWorkspaceId) {
+        breadcrumbItems.push({
+          "@type": "ListItem",
+          "position": 2,
+          "name": viewingCompany,
+          "item": `${window.location.origin}/company/${activeWorkspaceId}`
+        });
+        
+        if (location.pathname !== "/dashboard" && location.pathname !== "/accountant-dashboard" && !location.pathname.startsWith("/company/")) {
+          breadcrumbItems.push({
+            "@type": "ListItem",
+            "position": 3,
+            "name": getPageName(location.pathname),
+            "item": `${window.location.origin}${location.pathname}`
+          });
+        }
+      }
+    } else {
+      // Regular user breadcrumbs
+      breadcrumbItems.push({
+        "@type": "ListItem",
+        "position": 1,
+        "name": t('nav.dashboard'),
+        "item": `${window.location.origin}/dashboard`
+      });
+      
+      if (location.pathname !== "/dashboard") {
+        breadcrumbItems.push({
+          "@type": "ListItem",
+          "position": 2,
+          "name": getPageName(location.pathname),
+          "item": `${window.location.origin}${location.pathname}`
+        });
+      }
+    }
+    
+    return {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": breadcrumbItems
+    };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -224,6 +279,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Schema.org BreadcrumbList structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(getBreadcrumbStructuredData())
+        }}
+      />
+      
       {/* Mobile menu button - improved touch target */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -294,72 +357,94 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Main content - improved mobile padding */}
       <main className="lg:ml-64 min-h-screen pb-safe">
-        {/* Breadcrumb Navigation for Accountants */}
-        {userRole === "accountant" && (
-          <div className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20">
-            <div className="px-4 lg:px-8 py-2.5">
-              <Breadcrumb>
-                <BreadcrumbList className="text-sm">
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>
-                      <Link to="/accountant-dashboard" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
-                        <Home className="h-3.5 w-3.5" />
-                        <span className="max-w-[120px] truncate">{t('breadcrumb.myCompanies')}</span>
-                      </Link>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  
-                  {viewingCompany && activeWorkspaceId && (
-                    <>
-                      <BreadcrumbSeparator />
-                      <BreadcrumbItem>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground max-w-[200px] focus:outline-none">
-                            <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
-                            <span className="truncate">{viewingCompany}</span>
-                            <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-[280px] max-h-[300px] overflow-y-auto bg-background border shadow-lg z-[100]">
-                            <DropdownMenuLabel className="text-xs font-semibold">{t('breadcrumb.switchCompany')}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {availableWorkspaces.map((workspace) => (
-                              <DropdownMenuItem
-                                key={workspace.id}
-                                onClick={() => handleSwitchWorkspace(workspace.id)}
-                                className="cursor-pointer hover:bg-accent focus:bg-accent"
-                              >
-                                <div className="flex items-center justify-between w-full">
-                                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
-                                    <span className="truncate">{workspace.name}</span>
+        {/* Breadcrumb Navigation - for all users */}
+        <div className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20">
+          <div className="px-4 lg:px-8 py-2.5">
+            <Breadcrumb>
+              <BreadcrumbList className="text-sm">
+                {userRole === "accountant" ? (
+                  <>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/accountant-dashboard" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+                          <Home className="h-3.5 w-3.5" />
+                          <span className="max-w-[120px] truncate">{t('breadcrumb.myCompanies')}</span>
+                        </Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    
+                    {viewingCompany && activeWorkspaceId && (
+                      <>
+                        <BreadcrumbSeparator />
+                        <BreadcrumbItem>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground max-w-[200px] focus:outline-none">
+                              <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="truncate">{viewingCompany}</span>
+                              <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-[280px] max-h-[300px] overflow-y-auto bg-background border shadow-lg z-[100]">
+                              <DropdownMenuLabel className="text-xs font-semibold">{t('breadcrumb.switchCompany')}</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {availableWorkspaces.map((workspace) => (
+                                <DropdownMenuItem
+                                  key={workspace.id}
+                                  onClick={() => handleSwitchWorkspace(workspace.id)}
+                                  className="cursor-pointer hover:bg-accent focus:bg-accent"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                                      <span className="truncate">{workspace.name}</span>
+                                    </div>
+                                    {activeWorkspaceId === workspace.id && (
+                                      <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 ml-2" />
+                                    )}
                                   </div>
-                                  {activeWorkspaceId === workspace.id && (
-                                    <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 ml-2" />
-                                  )}
-                                </div>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </BreadcrumbItem>
-                      
-                      {location.pathname !== "/dashboard" && 
-                       location.pathname !== "/accountant-dashboard" && 
-                       !location.pathname.startsWith("/company/") && (
-                        <>
-                          <BreadcrumbSeparator />
-                          <BreadcrumbItem>
-                            <BreadcrumbPage className="max-w-[150px] truncate text-sm">{getPageName(location.pathname)}</BreadcrumbPage>
-                          </BreadcrumbItem>
-                        </>
-                      )}
-                    </>
-                  )}
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </BreadcrumbItem>
+                        
+                        {location.pathname !== "/dashboard" && 
+                         location.pathname !== "/accountant-dashboard" && 
+                         !location.pathname.startsWith("/company/") && (
+                          <>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                              <BreadcrumbPage className="max-w-[150px] truncate text-sm">{getPageName(location.pathname)}</BreadcrumbPage>
+                            </BreadcrumbItem>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/dashboard" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+                          <Home className="h-3.5 w-3.5" />
+                          <span className="max-w-[120px] truncate">{t('nav.dashboard')}</span>
+                        </Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    
+                    {location.pathname !== "/dashboard" && (
+                      <>
+                        <BreadcrumbSeparator />
+                        <BreadcrumbItem>
+                          <BreadcrumbPage className="max-w-[200px] truncate text-sm">{getPageName(location.pathname)}</BreadcrumbPage>
+                        </BreadcrumbItem>
+                      </>
+                    )}
+                  </>
+                )}
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
-        )}
+        </div>
         
         <div className="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 pb-8">
           {children}

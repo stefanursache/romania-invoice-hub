@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://romania-invoice-hub.lovable.app/sitemap.xml

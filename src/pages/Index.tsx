@@ -76,9 +76,9 @@ const Index = () => {
     return null;
   }
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5" itemScope itemType="https://schema.org/WebPage">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b" role="navigation" aria-label="Main navigation">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
@@ -148,7 +148,7 @@ const Index = () => {
       </nav>
 
       {/* Hero Section - mobile optimized */}
-      <section className="container mx-auto px-4 pt-24 pb-16 sm:pt-32 sm:pb-20 md:pt-40 md:pb-28">
+      <header className="container mx-auto px-4 pt-24 pb-16 sm:pt-32 sm:pb-20 md:pt-40 md:pb-28" itemScope itemType="https://schema.org/WPHeader">
         <div className="max-w-6xl mx-auto">
           <div className="text-center space-y-8 animate-fade-in">
             <Badge variant="secondary" className="gap-2 px-4 py-2 text-sm">
@@ -203,18 +203,19 @@ const Index = () => {
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-20 md:py-32">
+      <main>
+      <section className="container mx-auto px-4 py-20 md:py-32" itemScope itemType="https://schema.org/ItemList" aria-labelledby="features-heading">
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4 animate-fade-in">
             <Badge variant="outline" className="mb-2">Funcționalități</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold">
+            <h2 id="features-heading" className="text-4xl md:text-5xl font-bold">
               Tot ce ai nevoie pentru<br />facturare profesională
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Soluție completă adaptată pentru nevoile afacerilor românești
+              Soluție completă adaptată pentru nevoile afacerilor românești: eFactura ANAF, SAF-T D406, integrare SPV, colaborare contabil și gestionare cash-flow în timp real.
             </p>
           </div>
 
@@ -223,48 +224,53 @@ const Index = () => {
               {
                 icon: FileText,
                 title: "Facturare rapidă",
-                description: "Creează facturi profesionale în secunde. Export automat XML pentru eFactura ANAF.",
+                description: "Creează facturi profesionale în secunde. Export automat XML pentru eFactura ANAF. Facturi conforme cu legislația română pentru PFA și micro-SRL cu validare CUI/CIF.",
                 color: "from-blue-500 to-cyan-500",
                 delay: "0"
               },
               {
                 icon: TrendingUp,
                 title: "Urmărire cash-flow",
-                description: "Dashboard în timp real cu previziuni financiare și analize detaliate.",
+                description: "Dashboard în timp real cu previziuni financiare și analize detaliate. Monitorizează venituri, cheltuieli și facturi neachitate. Grafice interactive pentru afacerea ta.",
                 color: "from-purple-500 to-pink-500",
                 delay: "100"
               },
               {
                 icon: Users,
                 title: "Colaborare contabil",
-                description: "Invită-ți contabilul pentru acces direct la date. Fără Excel, fără email-uri.",
+                description: "Invită-ți contabilul pentru acces direct la date. Fără Excel, fără email-uri. Contabilul poate vizualiza și aproba facturi direct în platformă cu acces controlat.",
                 color: "from-orange-500 to-red-500",
                 delay: "200"
               },
               {
                 icon: BarChart3,
-                title: "Rapoarte SAF-T",
-                description: "Generare automată lunară SAF-T (D406) pentru conformitate ANAF.",
+                title: "Rapoarte SAF-T D406",
+                description: "Generare automată lunară SAF-T (D406) pentru conformitate ANAF. Export XML valid pentru declarații fiscale. Validare completă înainte de trimitere către autorități.",
                 color: "from-green-500 to-emerald-500",
                 delay: "300"
               },
               {
                 icon: Clock,
                 title: "Economisește timp",
-                description: "Automatizează procesele repetitive și concentrează-te pe afacere.",
+                description: "Automatizează procesele repetitive și concentrează-te pe afacere. Generare automată facturi recurente, rapoarte programate și sincronizare SPV.",
                 color: "from-indigo-500 to-blue-500",
                 delay: "400"
               },
               {
                 icon: Shield,
                 title: "Securitate maximă",
-                description: "Date criptate, backup automat și conformitate GDPR garantată.",
+                description: "Date criptate, backup automat și conformitate GDPR garantată. Hosting securizat în cloud cu uptime 99.9%. Protecție date fiscale și financiare conform legislației române.",
                 color: "from-rose-500 to-pink-500",
                 delay: "500"
               }
             ].map((feature, idx) => (
-              <Card 
+              <article 
                 key={idx} 
+                itemScope 
+                itemType="https://schema.org/SoftwareFeature"
+                itemProp="itemListElement"
+              >
+              <Card 
                 className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/20 animate-fade-in overflow-hidden"
                 style={{ animationDelay: `${feature.delay}ms` }}
               >
@@ -272,31 +278,33 @@ const Index = () => {
                   <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center transform transition-transform group-hover:scale-110 group-hover:rotate-3`}>
                     <feature.icon className="h-7 w-7 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <h3 className="text-2xl font-bold" itemProp="name">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed" itemProp="description">
                     {feature.description}
                   </p>
                 </CardContent>
               </Card>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="container mx-auto px-4 py-20" aria-labelledby="stats-heading">
         <div className="max-w-6xl mx-auto">
+          <h2 id="stats-heading" className="sr-only">Statistici platformă</h2>
           <Card className="bg-gradient-to-br from-primary via-primary to-accent text-primary-foreground overflow-hidden relative">
             <div className="absolute inset-0 bg-grid-white/10" />
             <CardContent className="p-12 md:p-16 relative">
               <div className="grid md:grid-cols-3 gap-12 text-center">
                 {[
-                  { value: "10,000+", label: "Facturi generate" },
-                  { value: "500+", label: "Companii active" },
-                  { value: "99.9%", label: "Uptime garantat" }
+                  { value: "10,000+", label: "Facturi generate pentru PFA și micro-SRL" },
+                  { value: "500+", label: "Companii active folosesc SmartInvoice" },
+                  { value: "99.9%", label: "Uptime garantat pentru facturare" }
                 ].map((stat, idx) => (
                   <div key={idx} className="space-y-2">
-                    <div className="text-5xl md:text-6xl font-bold">{stat.value}</div>
+                    <div className="text-5xl md:text-6xl font-bold" itemProp="value">{stat.value}</div>
                     <div className="text-lg opacity-90">{stat.label}</div>
                   </div>
                 ))}
@@ -307,13 +315,13 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20 md:py-32">
+      <section className="container mx-auto px-4 py-20 md:py-32" aria-labelledby="cta-heading">
         <div className="max-w-4xl mx-auto text-center space-y-8 animate-fade-in">
-          <h2 className="text-4xl md:text-6xl font-bold">
+          <h2 id="cta-heading" className="text-4xl md:text-6xl font-bold">
             Gata să simplifici<br />facturarea?
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Alătură-te miilor de PFA-uri și micro-SRL-uri care și-au simplificat procesul de facturare și conformitate fiscală.
+            Alătură-te miilor de PFA-uri și micro-SRL-uri care și-au simplificat procesul de facturare, eFactura ANAF, rapoarte SAF-T D406 și conformitate fiscală cu SmartInvoice.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Link to="/auth?mode=signup">
@@ -325,9 +333,10 @@ const Index = () => {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t bg-card/50 backdrop-blur-sm">
+      <footer className="border-t bg-card/50 backdrop-blur-sm" role="contentinfo" itemScope itemType="https://schema.org/WPFooter">
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-4">

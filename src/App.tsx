@@ -22,6 +22,8 @@ import Privacy from "./pages/Privacy";
 import GDPR from "./pages/GDPR";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import Sitemap from "./pages/Sitemap";
 import Contact from "./pages/Contact";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
@@ -61,6 +63,8 @@ const App = () => (
           <Route path="/gdpr" element={<GDPR />} />
           <Route path="/about" element={<About />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/sitemap.xml" element={<Sitemap />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/preturi" element={<Pricing />} />

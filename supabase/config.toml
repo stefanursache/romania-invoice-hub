@@ -27,6 +27,9 @@ verify_jwt = true
 [functions.extract-receipt-data]
 verify_jwt = true
 
+[functions.generate-blog-article]
+verify_jwt = false
+
 [functions.generate-efactura-xml]
 verify_jwt = true
 

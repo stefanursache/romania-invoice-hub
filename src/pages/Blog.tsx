@@ -1,8 +1,12 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { ro } from "date-fns/locale";
 import { 
   Calendar, 
   Clock, 
@@ -12,8 +16,17 @@ import {
   FileText,
   Lightbulb,
   BookOpen,
-  User
 } from "lucide-react";
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  author: string;
+  published_at: string;
+  reading_time_minutes: number;
+}
 
 const blogPosts = [
   {
@@ -89,6 +102,39 @@ const categories = [
 ];
 
 export default function Blog() {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("blog_posts")
+          .select("id, title, slug, excerpt, author, published_at, reading_time_minutes")
+          .eq("status", "published")
+          .order("published_at", { ascending: false });
+
+        if (error) throw error;
+        setPosts(data || []);
+      } catch (error) {
+        console.error("Error fetching blog posts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
+
+  const filteredPosts = posts.filter((post) =>
+    post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    post.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const featuredPosts = filteredPosts.slice(0, 2);
+  const regularPosts = filteredPosts.slice(2);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -111,6 +157,8 @@ export default function Blog() {
               <Input
                 placeholder="Caută articole..."
                 className="pl-10 h-12 bg-background/95 backdrop-blur"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -143,42 +191,58 @@ export default function Blog() {
             <h2 className="text-2xl md:text-3xl font-bold">Articole în tendințe</h2>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-12">
-            {blogPosts.filter(post => post.featured).map((post) => (
-              <Card key={post.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-                <div className="h-48 bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center text-6xl">
-                  {post.image}
-                </div>
-                <CardHeader>
-                  <div className="flex items-center gap-3 mb-3">
-                    <Badge variant="secondary">{post.category}</Badge>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {post.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {post.readTime}
-                      </span>
+          {loading ? (
+            <div className="grid md:grid-cols-2 gap-6 mb-12">
+              {[1, 2].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="h-48 bg-muted" />
+                  <CardHeader>
+                    <div className="h-4 bg-muted rounded w-3/4 mb-4" />
+                    <div className="h-6 bg-muted rounded mb-2" />
+                    <div className="h-4 bg-muted rounded w-full" />
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          ) : featuredPosts.length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-6 mb-12">
+              {featuredPosts.map((post) => (
+                <Link key={post.id} to={`/blog/${post.slug}`}>
+                  <Card className="group hover:shadow-xl transition-all duration-300 overflow-hidden h-full">
+                    <div className="h-48 bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center text-6xl">
+                      📋
                     </div>
-                  </div>
-                  <CardTitle className="group-hover:text-primary transition-colors">
-                    {post.title}
-                  </CardTitle>
-                  <CardDescription className="text-base mt-2">
-                    {post.excerpt}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="ghost" className="gap-2 group-hover:gap-3 transition-all">
-                    Citește mai mult
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <CardHeader>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(post.published_at), "d MMM yyyy", { locale: ro })}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {post.reading_time_minutes} min
+                          </span>
+                        </div>
+                      </div>
+                      <CardTitle className="group-hover:text-primary transition-colors">
+                        {post.title}
+                      </CardTitle>
+                      <CardDescription className="text-base mt-2">
+                        {post.excerpt}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="ghost" className="gap-2 group-hover:gap-3 transition-all">
+                        Citește mai mult
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          ) : null}
 
           {/* All Posts */}
           <div className="flex items-center gap-2 mb-8">
@@ -187,40 +251,59 @@ export default function Blog() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {blogPosts.filter(post => !post.featured).map((post) => (
-              <Card key={post.id} className="group hover:shadow-lg transition-all duration-300">
-                <div className="h-32 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-5xl">
-                  {post.image}
-                </div>
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-xs">{post.category}</Badge>
-                  </div>
-                  <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">
-                    {post.title}
-                  </CardTitle>
-                  <CardDescription className="text-sm line-clamp-2">
-                    {post.excerpt}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {post.date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {post.readTime}
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" className="gap-2 w-full">
-                    Citește
-                    <ArrowRight className="h-3 w-3" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="h-32 bg-muted" />
+                  <CardHeader>
+                    <div className="h-4 bg-muted rounded w-1/2 mb-2" />
+                    <div className="h-6 bg-muted rounded mb-2" />
+                    <div className="h-4 bg-muted rounded w-full" />
+                  </CardHeader>
+                </Card>
+              ))
+            ) : regularPosts.length > 0 ? (
+              regularPosts.map((post) => (
+                <Link key={post.id} to={`/blog/${post.slug}`}>
+                  <Card className="group hover:shadow-lg transition-all duration-300 h-full">
+                    <div className="h-32 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-5xl">
+                      📄
+                    </div>
+                    <CardHeader>
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">
+                        {post.title}
+                      </CardTitle>
+                      <CardDescription className="text-sm line-clamp-2">
+                        {post.excerpt}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(post.published_at), "d MMM", { locale: ro })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {post.reading_time_minutes} min
+                        </span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="gap-2 w-full">
+                        Citește
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {searchTerm ? "Nu am găsit articole" : "Articolele vor apărea aici în curând"}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>

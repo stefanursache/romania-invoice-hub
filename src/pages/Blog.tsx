@@ -28,77 +28,14 @@ interface BlogPost {
   reading_time_minutes: number;
 }
 
-const blogPosts = [
-  {
-    id: 1,
-    title: "Ghid complet: Cum să emiti facturi conforme ANAF în 2025",
-    excerpt: "Tot ce trebuie să știi despre emiterea facturilor în România - de la cerințe legale la bune practici.",
-    category: "Legislație",
-    date: "15 Ian 2025",
-    readTime: "8 min",
-    image: "📋",
-    featured: true
-  },
-  {
-    id: 2,
-    title: "SAF-T România: Ghid practic pentru export și raportare",
-    excerpt: "Înțelege cerințele SAF-T și cum să exporți corect datele financiare către ANAF.",
-    category: "Conformitate",
-    date: "10 Ian 2025",
-    readTime: "10 min",
-    image: "📊",
-    featured: true
-  },
-  {
-    id: 3,
-    title: "5 greșeli comune în facturare și cum să le eviți",
-    excerpt: "Descoperă cele mai frecvente erori pe care antreprenorii le fac și cum să le previi.",
-    category: "Bune practici",
-    date: "5 Ian 2025",
-    readTime: "6 min",
-    image: "⚠️",
-    featured: false
-  },
-  {
-    id: 4,
-    title: "Colaborarea cu contabilul: Cum să optimizezi procesele",
-    excerpt: "Sfaturi practice pentru o colaborare eficientă între antreprenor și contabil.",
-    category: "Productivitate",
-    date: "28 Dec 2024",
-    readTime: "7 min",
-    image: "🤝",
-    featured: false
-  },
-  {
-    id: 5,
-    title: "Automatizarea facturării: De ce contează pentru afacerea ta",
-    excerpt: "Descoperă beneficiile automatizării și cum poate economisi timp prețios.",
-    category: "Tehnologie",
-    date: "20 Dec 2024",
-    readTime: "5 min",
-    image: "⚡",
-    featured: false
-  },
-  {
-    id: 6,
-    title: "Plan de conturi: Structura corectă pentru micro-întreprinderi",
-    excerpt: "Ghid practic pentru configurarea planului de conturi conform standardelor românești.",
-    category: "Contabilitate",
-    date: "15 Dec 2024",
-    readTime: "9 min",
-    image: "📖",
-    featured: false
-  }
-];
-
 const categories = [
-  { name: "Toate", count: blogPosts.length },
-  { name: "Legislație", count: 1 },
-  { name: "Conformitate", count: 1 },
-  { name: "Bune practici", count: 1 },
-  { name: "Productivitate", count: 1 },
-  { name: "Tehnologie", count: 1 },
-  { name: "Contabilitate", count: 1 }
+  { name: "Toate", count: 0 },
+  { name: "Legislație", count: 0 },
+  { name: "Conformitate", count: 0 },
+  { name: "Bune practici", count: 0 },
+  { name: "Productivitate", count: 0 },
+  { name: "Tehnologie", count: 0 },
+  { name: "Contabilitate", count: 0 }
 ];
 
 export default function Blog() {

@@ -40,6 +40,9 @@ interface Invoice {
   approved_at?: string;
   approval_notes?: string;
   spv_sent_at?: string | null;
+  updated_at?: string;
+  last_edited_by?: string;
+  user_id: string;
   clients: {
     name: string;
   };
@@ -71,6 +74,7 @@ const Invoices = () => {
   const [spvValidationReport, setSpvValidationReport] = useState<any>(null);
   const [deletingInvoice, setDeletingInvoice] = useState<Record<string, boolean>>({});
   const [creatingStorno, setCreatingStorno] = useState<Record<string, boolean>>({});
+  const [editorProfiles, setEditorProfiles] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -159,6 +163,23 @@ const Invoices = () => {
         console.log(`  - Invoice ${inv.invoice_number}: status=${inv.status}, approved=${inv.accountant_approved}`);
       });
       setInvoices(data || []);
+
+      // Fetch editor profiles for invoices that have last_edited_by
+      const editorIds = [...new Set(data?.filter(inv => inv.last_edited_by).map(inv => inv.last_edited_by) || [])];
+      if (editorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, company_name")
+          .in("id", editorIds);
+        
+        if (profiles) {
+          const profileMap: Record<string, string> = {};
+          profiles.forEach(p => {
+            profileMap[p.id] = p.company_name;
+          });
+          setEditorProfiles(profileMap);
+        }
+      }
     }
     console.log("========================================");
     setLoading(false);
@@ -909,6 +930,17 @@ const Invoices = () => {
                       spvSentAt={invoice.spv_sent_at}
                     />
                   </div>
+
+                  {/* Last edited info */}
+                  {invoice.last_edited_by && invoice.updated_at && (
+                    <div className="mb-4 text-xs text-muted-foreground flex items-center gap-1">
+                      <Edit className="h-3 w-3" />
+                      <span>
+                        Ultima editare de {editorProfiles[invoice.last_edited_by] || 'Necunoscut'} 
+                        {' '}pe {new Date(invoice.updated_at).toLocaleDateString("ro-RO", { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                     <div>

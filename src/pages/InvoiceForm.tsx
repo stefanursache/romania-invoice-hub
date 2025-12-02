@@ -747,22 +747,21 @@ const InvoiceForm = () => {
 
                     <div className="col-span-1 space-y-2">
                       <Label>TVA %</Label>
-                      <Select
-                        value={item.vat_rate.toString()}
-                        onValueChange={(value) =>
-                          updateLineItem(index, "vat_rate", parseInt(value))
+                      <Input
+                        type="number"
+                        value={item.vat_rate}
+                        onChange={(e) =>
+                          updateLineItem(
+                            index,
+                            "vat_rate",
+                            parseNumericInput(e.target.value)
+                          )
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="19">19% (Standard)</SelectItem>
-                          <SelectItem value="9">9% (Redus)</SelectItem>
-                          <SelectItem value="5">5% (Super-redus)</SelectItem>
-                          <SelectItem value="0">0% (Scutit)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        min="0"
+                        max="100"
+                        step="1"
+                        placeholder="19"
+                      />
                     </div>
 
                     <div className="col-span-2 space-y-2">

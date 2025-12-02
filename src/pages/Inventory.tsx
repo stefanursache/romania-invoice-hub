@@ -459,18 +459,16 @@ const Inventory = () => {
                     />
                   </div>
                   <div>
-                    <Label>{t('inventory.vatRate')}</Label>
-                    <Select value={String(formData.vat_rate)} onValueChange={(value) => setFormData({...formData, vat_rate: Number(value)})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">0%</SelectItem>
-                        <SelectItem value="5">5%</SelectItem>
-                        <SelectItem value="9">9%</SelectItem>
-                        <SelectItem value="19">19%</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label>{t('inventory.vatRate')} (%)</Label>
+                    <Input
+                      type="number"
+                      value={formData.vat_rate}
+                      onChange={(e) => setFormData({...formData, vat_rate: parseNumericInput(e.target.value)})}
+                      min="0"
+                      max="100"
+                      step="1"
+                      placeholder="19"
+                    />
                   </div>
                 </div>
                 <DialogFooter>

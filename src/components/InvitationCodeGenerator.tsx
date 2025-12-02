@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, RefreshCw, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { ro } from "date-fns/locale";
 
 interface InvitationCode {
   id: string;
@@ -21,11 +19,42 @@ interface InvitationCode {
 export const InvitationCodeGenerator = () => {
   const [loading, setLoading] = useState(false);
   const [currentCode, setCurrentCode] = useState<InvitationCode | null>(null);
+  const [countdown, setCountdown] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
     loadCurrentCode();
   }, []);
+
+  // Countdown timer that updates every second
+  useEffect(() => {
+    if (!currentCode || new Date(currentCode.expires_at) < new Date()) {
+      setCountdown("");
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const expiryTime = new Date(currentCode.expires_at).getTime();
+      const timeLeft = expiryTime - now;
+
+      if (timeLeft <= 0) {
+        setCountdown("Expirat");
+        return;
+      }
+
+      const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+      setCountdown(`${hours}h ${minutes}m ${seconds}s`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentCode]);
 
   const loadCurrentCode = async () => {
     try {
@@ -110,9 +139,6 @@ export const InvitationCodeGenerator = () => {
   };
 
   const isExpired = currentCode && new Date(currentCode.expires_at) < new Date();
-  const timeRemaining = currentCode && !isExpired
-    ? Math.floor((new Date(currentCode.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60))
-    : 0;
 
   return (
     <Card>
@@ -153,8 +179,7 @@ export const InvitationCodeGenerator = () => {
               <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>
-                  Expiră în <strong className="text-foreground">{timeRemaining}</strong> {timeRemaining === 1 ? "oră" : "ore"}
-                  {" "}({format(new Date(currentCode.expires_at), "dd MMM yyyy, HH:mm", { locale: ro })})
+                  Timp rămas: <strong className="text-foreground text-base font-mono">{countdown}</strong>
                 </span>
               </div>
             </div>
@@ -180,8 +205,7 @@ export const InvitationCodeGenerator = () => {
                       Codul a expirat
                     </p>
                     <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-                      Ultimul cod a expirat la {format(new Date(currentCode.expires_at), "dd MMM yyyy, HH:mm", { locale: ro })}. 
-                      Generează unul nou.
+                      Ultimul cod a expirat. Generează unul nou pentru a invita un contabil.
                     </p>
                   </div>
                 </div>

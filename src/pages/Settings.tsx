@@ -788,6 +788,92 @@ const Settings = () => {
           )}
 
           {!isViewingClient && (
+            <TabsContent value="account" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cont personal</CardTitle>
+                  <CardDescription>Informațiile tale personale și de contact</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_phone">Telefon</Label>
+                        <Input
+                          id="contact_phone"
+                          type="tel"
+                          value={profile.phone || ""}
+                          onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                          placeholder="+40 721 234 567"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_email">Email de contact</Label>
+                        <Input
+                          id="contact_email"
+                          type="email"
+                          value={profile.email || ""}
+                          onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                          placeholder="contact@exemplu.ro"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="personal_address">Adresă</Label>
+                      <Textarea
+                        id="personal_address"
+                        value={profile.address || ""}
+                        onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                        rows={2}
+                        placeholder="Strada, număr, bloc, etc."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="personal_city">Oraș</Label>
+                        <Input
+                          id="personal_city"
+                          value={profile.city || ""}
+                          onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                          placeholder="București"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="personal_county">Județ</Label>
+                        <Input
+                          id="personal_county"
+                          value={profile.county || ""}
+                          onChange={(e) => setProfile({ ...profile, county: e.target.value })}
+                          placeholder="Ilfov"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="personal_postal_code">Cod poștal</Label>
+                        <Input
+                          id="personal_postal_code"
+                          value={profile.postal_code || ""}
+                          onChange={(e) => setProfile({ ...profile, postal_code: e.target.value })}
+                          placeholder="012345"
+                        />
+                      </div>
+                    </div>
+
+                    <Button type="submit" disabled={saving}>
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Salvează modificările
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {!isViewingClient && (
             <TabsContent value="security" className="space-y-4">
             <Card>
               <CardHeader>

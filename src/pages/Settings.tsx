@@ -796,6 +796,27 @@ const Settings = () => {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Nume complet</Label>
+                      <Input
+                        id="full_name"
+                        value={(profile as any).full_name || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Only allow letters, spaces, and hyphens
+                          if (/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]*$/.test(value)) {
+                            setProfile({ ...profile, full_name: value } as any);
+                          }
+                        }}
+                        placeholder="Ion Popescu"
+                        pattern="^[a-zA-ZăâîșțĂÂÎȘȚ\s-]{2,100}$"
+                        title="Numele trebuie să conțină doar litere, spații și cratime (2-100 caractere)"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Doar litere, spații și cratime. Minim 2 caractere.
+                      </p>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="contact_phone">Telefon</Label>

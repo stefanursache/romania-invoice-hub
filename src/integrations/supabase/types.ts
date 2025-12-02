@@ -635,6 +635,7 @@ export type Database = {
           created_at: string | null
           cui_cif: string | null
           email: string | null
+          full_name: string | null
           id: string
           logo_url: string | null
           payment_plan: string | null
@@ -656,6 +657,7 @@ export type Database = {
           created_at?: string | null
           cui_cif?: string | null
           email?: string | null
+          full_name?: string | null
           id: string
           logo_url?: string | null
           payment_plan?: string | null
@@ -677,6 +679,7 @@ export type Database = {
           created_at?: string | null
           cui_cif?: string | null
           email?: string | null
+          full_name?: string | null
           id?: string
           logo_url?: string | null
           payment_plan?: string | null

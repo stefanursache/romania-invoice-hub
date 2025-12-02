@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle, ShieldCheck, Trash2, Edit } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
@@ -818,6 +818,18 @@ const Invoices = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
+                      {/* Edit button - shows for owners when invoice hasn't been sent to SPV */}
+                      {userRole === "owner" && !invoice.spv_sent_at && (
+                        <Link to={`/invoices/${invoice.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Editează factură"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"

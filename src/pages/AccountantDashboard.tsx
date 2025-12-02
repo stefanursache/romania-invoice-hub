@@ -53,6 +53,7 @@ interface WorkspaceAccess {
   };
   stats: {
     totalInvoices: number;
+    newInvoices: number;
     draftInvoices: number;
     totalClients: number;
   };
@@ -105,6 +106,10 @@ const AccountantDashboard = () => {
 
       if (membershipsError) throw membershipsError;
 
+      // Get first day of current month
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
       // Load details for each workspace
       const workspaceDetails = await Promise.all(
         (memberships || []).map(async (membership) => {
@@ -119,7 +124,7 @@ const AccountantDashboard = () => {
           const [invoicesRes, clientsRes] = await Promise.all([
             supabase
               .from("invoices")
-              .select("status", { count: "exact" })
+              .select("status, created_at", { count: "exact" })
               .eq("user_id", membership.workspace_owner_id),
             supabase
               .from("clients")
@@ -128,6 +133,7 @@ const AccountantDashboard = () => {
           ]);
 
           const draftCount = invoicesRes.data?.filter(inv => inv.status === "draft").length || 0;
+          const newCount = invoicesRes.data?.filter(inv => inv.created_at >= firstDayOfMonth).length || 0;
 
           return {
             workspace_owner_id: membership.workspace_owner_id,
@@ -136,6 +142,7 @@ const AccountantDashboard = () => {
             owner_profile: profile || { company_name: "N/A", email: "N/A" },
             stats: {
               totalInvoices: invoicesRes.count || 0,
+              newInvoices: newCount,
               draftInvoices: draftCount,
               totalClients: clientsRes.count || 0,
             },
@@ -186,10 +193,11 @@ const AccountantDashboard = () => {
   const totalStats = workspaces.reduce(
     (acc, ws) => ({
       totalInvoices: acc.totalInvoices + ws.stats.totalInvoices,
+      newInvoices: acc.newInvoices + ws.stats.newInvoices,
       totalClients: acc.totalClients + ws.stats.totalClients,
       draftInvoices: acc.draftInvoices + ws.stats.draftInvoices,
     }),
-    { totalInvoices: 0, totalClients: 0, draftInvoices: 0 }
+    { totalInvoices: 0, newInvoices: 0, totalClients: 0, draftInvoices: 0 }
   );
 
   if (loading) {
@@ -399,21 +407,49 @@ const AccountantDashboard = () => {
 
                   <CardContent className="space-y-4">
                     {/* Quick Stats */}
-                    <div className="grid grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg">
-                      <div className="text-center">
-                        <div className="text-xl font-bold text-primary">{workspace.stats.totalInvoices}</div>
+                    <div className="grid grid-cols-4 gap-2 p-3 bg-muted/30 rounded-lg">
+                      <button 
+                        className="text-center hover:bg-muted/50 rounded-md p-1 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/company/${workspace.workspace_owner_id}?tab=invoices`);
+                        }}
+                      >
+                        <div className="text-lg font-bold text-primary hover:underline">{workspace.stats.totalInvoices}</div>
                         <p className="text-xs text-muted-foreground mt-0.5">Facturi</p>
-                      </div>
-                      <div className="text-center border-x border-border">
-                        <div className="text-xl font-bold text-accent">{workspace.stats.totalClients}</div>
+                      </button>
+                      <button 
+                        className="text-center border-x border-border hover:bg-muted/50 rounded-md p-1 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/company/${workspace.workspace_owner_id}?tab=invoices&filter=new`);
+                        }}
+                      >
+                        <div className="text-lg font-bold text-accent hover:underline">{workspace.stats.newInvoices}</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Noi</p>
+                      </button>
+                      <button 
+                        className="text-center border-r border-border hover:bg-muted/50 rounded-md p-1 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/company/${workspace.workspace_owner_id}?tab=clients`);
+                        }}
+                      >
+                        <div className="text-lg font-bold text-muted-foreground hover:underline">{workspace.stats.totalClients}</div>
                         <p className="text-xs text-muted-foreground mt-0.5">Clienți</p>
-                      </div>
-                      <div className="text-center">
-                        <div className={`text-xl font-bold ${workspace.stats.draftInvoices > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                      </button>
+                      <button 
+                        className="text-center hover:bg-muted/50 rounded-md p-1 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/company/${workspace.workspace_owner_id}?tab=invoices&filter=draft`);
+                        }}
+                      >
+                        <div className={`text-lg font-bold hover:underline ${workspace.stats.draftInvoices > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
                           {workspace.stats.draftInvoices}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">Ciorne</p>
-                      </div>
+                      </button>
                     </div>
 
                     {/* Action Footer */}

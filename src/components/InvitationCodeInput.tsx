@@ -111,14 +111,14 @@ export const InvitationCodeInput = () => {
 
       toast({
         title: "Succes!",
-        description: "Ai fost adăugat cu succes la workspace.",
+        description: "Ai fost adăugat cu succes la workspace. Compania apare acum în lista ta.",
       });
 
       setCode("");
       
-      // Refresh the page to show new workspace
+      // Force full page reload to show new workspace immediately
       setTimeout(() => {
-        navigate("/accountant-dashboard");
+        window.location.href = "/accountant-dashboard";
       }, 1500);
     } catch (error: any) {
       console.error("Error joining workspace:", error);

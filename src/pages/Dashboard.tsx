@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { FileText, Users, TrendingUp, Clock } from "lucide-react";
 import { SaftStatusWidget } from "@/components/SaftStatusWidget";
 import { InvoiceUsageWidget } from "@/components/InvoiceUsageWidget";
@@ -78,9 +79,21 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">Bine ai venit! Iată o privire de ansamblu.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
+            <p className="text-muted-foreground">Bine ai venit! Iată o privire de ansamblu.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => window.location.href = '/invoice-form'} className="gap-2">
+              <FileText className="h-4 w-4" />
+              Factură Nouă
+            </Button>
+            <Button onClick={() => window.location.href = '/clients'} variant="outline" className="gap-2">
+              <Users className="h-4 w-4" />
+              Client Nou
+            </Button>
+          </div>
         </div>
 
         <StartupDiscountBanner />

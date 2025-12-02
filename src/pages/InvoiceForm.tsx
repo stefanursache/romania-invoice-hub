@@ -621,7 +621,7 @@ const InvoiceForm = () => {
                           type="number"
                           min="0"
                           value={newClientData.payment_terms}
-                          onChange={(e) => handleNewClientPaymentTermsChange(parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleNewClientPaymentTermsChange(parseNumericInput(e.target.value))}
                         />
                       </div>
                     </div>

@@ -9,6 +9,7 @@ import { Loader2, Ban, DollarSign, RefreshCw, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
+import { parseNumericInput } from "@/lib/utils";
 
 interface Subscription {
   id: string;
@@ -373,7 +374,7 @@ export function SubscriptionManager() {
                     step="0.01"
                     placeholder="e.g., 29.99"
                     value={refundAmount}
-                    onChange={(e) => setRefundAmount(e.target.value)}
+                    onChange={(e) => setRefundAmount(parseNumericInput(e.target.value).toString())}
                   />
                 </div>
               </div>

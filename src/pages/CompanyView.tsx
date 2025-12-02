@@ -676,100 +676,28 @@ const CompanyView = () => {
           </Card>
         </div>
 
-        {/* Tabbed Content */}
-        <Tabs defaultValue="profile" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="profile">
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </TabsTrigger>
+        {/* Simplified Tabs - Most Important First */}
+        <Tabs defaultValue="invoices" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="invoices">
               <FileText className="h-4 w-4 mr-2" />
-              Invoices
+              Facturi
             </TabsTrigger>
             <TabsTrigger value="expenses">
               <Receipt className="h-4 w-4 mr-2" />
-              Expenses
-            </TabsTrigger>
-            <TabsTrigger value="bank-statements">
-              <Landmark className="h-4 w-4 mr-2" />
-              Bank Statements
+              Cheltuieli
             </TabsTrigger>
             <TabsTrigger value="reports">
               <BarChart3 className="h-4 w-4 mr-2" />
-              SAF-T Reports
+              Rapoarte
             </TabsTrigger>
-            <TabsTrigger value="accounts">
-              <BookOpen className="h-4 w-4 mr-2" />
-              Chart of Accounts
+            <TabsTrigger value="more">
+              <Settings className="h-4 w-4 mr-2" />
+              Mai mult
             </TabsTrigger>
           </TabsList>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Company Profile</CardTitle>
-                  <CardDescription>Complete company information and registration details</CardDescription>
-                </div>
-                <Button
-                  onClick={() => navigate(`/settings?workspace_owner_id=${companyId}`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Gestionează SPV / e-Factura
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Company Name</p>
-                      <p className="text-lg font-semibold">{profile.company_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">CUI/CIF</p>
-                      <p className="text-lg">{profile.cui_cif || "Not provided"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Reg. Com.</p>
-                      <p className="text-lg">{profile.reg_com || "Not provided"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Bank Account</p>
-                      <p className="text-lg font-mono">{profile.bank_account || "Not provided"}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Address</p>
-                      <p className="text-lg">{profile.address || "Not provided"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">City</p>
-                      <p className="text-lg">{profile.city || "Not provided"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">County</p>
-                      <p className="text-lg">{profile.county || "Not provided"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                      <p className="text-lg">{profile.phone || "Not provided"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Email</p>
-                      <p className="text-lg">{profile.email || "Not provided"}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Invoices Tab */}
+          {/* Invoices Tab - Main Priority */}
           <TabsContent value="invoices">
             <Card>
               <CardHeader>
@@ -967,93 +895,6 @@ const CompanyView = () => {
             </Card>
           </TabsContent>
 
-          {/* Bank Statements Tab */}
-          <TabsContent value="bank-statements">
-            <Card>
-              <CardHeader>
-                <CardTitle>Bank Statements ({bankStatements.length})</CardTitle>
-                <CardDescription>Bank statements uploaded by the company</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {bankStatements.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Landmark className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No bank statements found</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>File Name</TableHead>
-                        <TableHead>Statement Date</TableHead>
-                        <TableHead>Upload Date</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Notes</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bankStatements.map((statement) => (
-                        <TableRow key={statement.id}>
-                          <TableCell className="font-medium">{statement.file_name}</TableCell>
-                          <TableCell>
-                            {statement.statement_date
-                              ? format(new Date(statement.statement_date), "dd MMM yyyy")
-                              : "—"}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(statement.upload_date), "dd MMM yyyy HH:mm")}
-                          </TableCell>
-                          <TableCell>
-                            {statement.file_size < 1024
-                              ? `${statement.file_size} B`
-                              : statement.file_size < 1024 * 1024
-                              ? `${(statement.file_size / 1024).toFixed(1)} KB`
-                              : `${(statement.file_size / (1024 * 1024)).toFixed(1)} MB`}
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {statement.notes || "—"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={async () => {
-                                try {
-                                  const { data, error } = await supabase.storage
-                                    .from("bank-statements")
-                                    .download(statement.file_path);
-
-                                  if (error) throw error;
-
-                                  const url = URL.createObjectURL(data);
-                                  const a = document.createElement("a");
-                                  a.href = url;
-                                  a.download = statement.file_name;
-                                  document.body.appendChild(a);
-                                  a.click();
-                                  document.body.removeChild(a);
-                                  URL.revokeObjectURL(url);
-
-                                  toast.success("Download started");
-                                } catch (error: any) {
-                                  console.error("Error downloading statement:", error);
-                                  toast.error("Failed to download file");
-                                }
-                              }}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* SAF-T Reports Tab */}
           <TabsContent value="reports">
             <Card>
@@ -1156,25 +997,168 @@ const CompanyView = () => {
             </Card>
           </TabsContent>
 
-          {/* Chart of Accounts Tab */}
-          <TabsContent value="accounts">
+          {/* More Tab - Profile, Bank Statements, Chart of Accounts */}
+          <TabsContent value="more" className="space-y-6">
+            {/* Company Profile */}
             <Card>
-              <CardHeader>
-                <CardTitle>Chart of Accounts ({accounts.length})</CardTitle>
-                <CardDescription>Complete list of accounting accounts</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Profil Companie</CardTitle>
+                  <CardDescription>Informații complete despre companie</CardDescription>
+                </div>
+                <Button
+                  onClick={() => navigate(`/settings?workspace_owner_id=${companyId}`)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Gestionează SPV
+                </Button>
               </CardHeader>
               <CardContent>
-                {accounts.length === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Nume Companie</p>
+                      <p className="text-lg font-semibold">{profile.company_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">CUI/CIF</p>
+                      <p className="text-lg">{profile.cui_cif || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Reg. Com.</p>
+                      <p className="text-lg">{profile.reg_com || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Cont Bancar</p>
+                      <p className="text-lg font-mono">{profile.bank_account || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Adresă</p>
+                      <p className="text-lg">{profile.address || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Oraș</p>
+                      <p className="text-lg">{profile.city || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Județ</p>
+                      <p className="text-lg">{profile.county || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Telefon</p>
+                      <p className="text-lg">{profile.phone || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Email</p>
+                      <p className="text-lg">{profile.email || "—"}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bank Statements */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Extrase Bancare ({bankStatements.length})</CardTitle>
+                <CardDescription>Toate extrasele bancare încărcate</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {bankStatements.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    No accounts found
+                    <Landmark className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nu există extrase bancare</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Account Code</TableHead>
-                        <TableHead>Account Name</TableHead>
-                        <TableHead>Type</TableHead>
+                        <TableHead>Nume Fișier</TableHead>
+                        <TableHead>Dată Încărcare</TableHead>
+                        <TableHead>Mărime</TableHead>
+                        <TableHead>Note</TableHead>
+                        <TableHead className="text-right">Acțiuni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bankStatements.map((statement) => (
+                        <TableRow key={statement.id}>
+                          <TableCell className="font-medium">{statement.file_name}</TableCell>
+                          <TableCell>
+                            {format(new Date(statement.upload_date), "dd MMM yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell>
+                            {statement.file_size < 1024
+                              ? `${statement.file_size} B`
+                              : statement.file_size < 1024 * 1024
+                              ? `${(statement.file_size / 1024).toFixed(1)} KB`
+                              : `${(statement.file_size / (1024 * 1024)).toFixed(1)} MB`}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {statement.notes || "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => {
+                                try {
+                                  const { data, error } = await supabase.storage
+                                    .from("bank-statements")
+                                    .download(statement.file_path);
+
+                                  if (error) throw error;
+
+                                  const url = URL.createObjectURL(data);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = statement.file_name;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+
+                                  toast.success("Download pornit");
+                                } catch (error: any) {
+                                  console.error("Error downloading statement:", error);
+                                  toast.error("Eroare la descărcare");
+                                }
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Chart of Accounts */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Plan de Conturi ({accounts.length})</CardTitle>
+                <CardDescription>Lista completă de conturi contabile</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {accounts.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nu există conturi</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cod Cont</TableHead>
+                        <TableHead>Nume Cont</TableHead>
+                        <TableHead>Tip</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

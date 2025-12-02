@@ -934,8 +934,8 @@ const Invoices = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Edit button - shows for owners when invoice hasn't been sent to SPV */}
-                      {userRole === "owner" && !invoice.spv_sent_at && (
+                      {/* Edit button - shows for owners and accountants when invoice hasn't been sent to SPV */}
+                      {(userRole === "owner" || userRole === "accountant") && !invoice.spv_sent_at && invoice.status !== "storno_issued" && (
                         <Link to={`/invoices/${invoice.id}`}>
                           <Button
                             size="sm"

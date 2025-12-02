@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark, Settings, CheckCircle, Send } from "lucide-react";
+import { Loader2, Building2, FileText, Receipt, BarChart3, BookOpen, Download, Eye, User, FileDown, FileSpreadsheet, Landmark, Settings, CheckCircle, Send, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { exportToCSV } from "@/utils/exportUtils";
@@ -42,6 +42,7 @@ interface Invoice {
   status: string;
   total: number;
   currency: string;
+  invoice_type: string;
   clients: { name: string };
   accountant_approved: boolean;
   approval_notes: string | null;
@@ -198,7 +199,7 @@ const CompanyView = () => {
   const loadInvoices = async () => {
     const { data, error } = await supabase
       .from("invoices")
-      .select("id, invoice_number, issue_date, due_date, status, total, currency, accountant_approved, approval_notes, spv_sent_at, clients(name)")
+      .select("id, invoice_number, issue_date, due_date, status, total, currency, invoice_type, accountant_approved, approval_notes, spv_sent_at, clients(name)")
       .eq("user_id", companyId)
       .order("issue_date", { ascending: false })
       .limit(50);
@@ -743,6 +744,17 @@ const CompanyView = () => {
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center gap-2 justify-center">
+                              {/* Edit button - shows when invoice hasn't been sent to SPV */}
+                              {!invoice.spv_sent_at && invoice.status !== "storno_issued" && invoice.invoice_type !== "storno" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => navigate(`/invoices/${invoice.id}`)}
+                                  title="Editează factură"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="ghost"

@@ -358,5 +358,23 @@ export const generateInvoicePDF = (
 
   // Save with appropriate filename
   const filePrefix = invoice.invoice_type === "proforma" ? "Proforma" : "Factura";
-  doc.save(`${filePrefix}-${invoice.invoice_number}.pdf`);
+  const filename = `${filePrefix}-${invoice.invoice_number}.pdf`;
+  
+  // Generate PDF blob
+  const pdfBlob = doc.output('blob');
+  
+  // Create download link
+  const url = window.URL.createObjectURL(pdfBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  
+  // Trigger download
+  document.body.appendChild(link);
+  link.click();
+  
+  // Clean up immediately
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 };

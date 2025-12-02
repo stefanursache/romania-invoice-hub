@@ -418,6 +418,7 @@ export type Database = {
           invoice_type: string | null
           issue_date: string
           language: string | null
+          last_edited_by: string | null
           notes: string | null
           spv_sent_at: string | null
           spv_status: string | null
@@ -442,6 +443,7 @@ export type Database = {
           invoice_type?: string | null
           issue_date?: string
           language?: string | null
+          last_edited_by?: string | null
           notes?: string | null
           spv_sent_at?: string | null
           spv_status?: string | null
@@ -466,6 +468,7 @@ export type Database = {
           invoice_type?: string | null
           issue_date?: string
           language?: string | null
+          last_edited_by?: string | null
           notes?: string | null
           spv_sent_at?: string | null
           spv_status?: string | null

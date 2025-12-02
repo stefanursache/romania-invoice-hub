@@ -93,10 +93,21 @@ const InvoiceForm = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Check if user is an accountant working on a workspace
+    const { data: memberData } = await supabase
+      .from("workspace_members")
+      .select("workspace_owner_id, role")
+      .eq("member_user_id", user.id)
+      .eq("role", "accountant")
+      .maybeSingle();
+
+    // Use workspace owner's id if accountant, otherwise use user's own id
+    const ownerIdToUse = memberData?.workspace_owner_id || user.id;
+
     const { data, error } = await supabase
       .from("clients")
       .select("id, name, payment_terms")
-      .eq("user_id", user.id)
+      .eq("user_id", ownerIdToUse)
       .order("name");
 
     if (!error && data) {
@@ -151,6 +162,13 @@ const InvoiceForm = () => {
     // Check if invoice has been sent to SPV - if so, redirect
     if (invoice.spv_sent_at) {
       toast.error("Această factură a fost deja trimisă în SPV și nu mai poate fi editată");
+      navigate("/invoices");
+      return;
+    }
+
+    // Check if invoice has been reversed (storno issued)
+    if (invoice.status === "storno_issued") {
+      toast.error("Această factură a fost stornată și nu mai poate fi editată");
       navigate("/invoices");
       return;
     }
@@ -358,7 +376,7 @@ const InvoiceForm = () => {
 
     try {
       if (id) {
-        // Update existing invoice
+        // Update existing invoice with tracking of who edited
         const { error: invoiceError } = await supabase
           .from("invoices")
           .update({
@@ -366,6 +384,7 @@ const InvoiceForm = () => {
             client_id: clientId,
             ...totals,
             status,
+            last_edited_by: user.id,
           })
           .eq("id", id);
 

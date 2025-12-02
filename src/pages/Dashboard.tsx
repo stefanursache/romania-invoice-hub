@@ -6,6 +6,7 @@ import { FileText, Users, TrendingUp, Clock } from "lucide-react";
 import { SaftStatusWidget } from "@/components/SaftStatusWidget";
 import { InvoiceUsageWidget } from "@/components/InvoiceUsageWidget";
 import { StartupDiscountBanner } from "@/components/StartupDiscountBanner";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -49,24 +50,28 @@ const Dashboard = () => {
       value: stats.totalClients,
       icon: Users,
       color: "text-primary",
+      link: "/clients",
     },
     {
       title: "Total Facturi",
       value: stats.totalInvoices,
       icon: FileText,
       color: "text-accent",
+      link: "/invoices",
     },
     {
       title: "Ciorne",
       value: stats.draftInvoices,
       icon: Clock,
       color: "text-muted-foreground",
+      link: "/invoices",
     },
     {
       title: "Restanțe",
       value: stats.overdueInvoices,
       icon: TrendingUp,
       color: "text-destructive",
+      link: "/invoices",
     },
   ];
 
@@ -84,17 +89,19 @@ const Dashboard = () => {
           {statCards.map((stat) => {
             const Icon = stat.icon;
             return (
-              <Card key={stat.title} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </CardTitle>
-                  <Icon className={`h-5 w-5 ${stat.color}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stat.value}</div>
-                </CardContent>
-              </Card>
+              <Link key={stat.title} to={stat.link}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </CardTitle>
+                    <Icon className={`h-5 w-5 ${stat.color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
         </div>

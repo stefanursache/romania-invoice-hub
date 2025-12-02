@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook, TrendingUp, Sparkles, Headphones, Activity } from "lucide-react";
+import { Loader2, LogOut, Shield, Users as UsersIcon, CreditCard, Webhook, TrendingUp, Sparkles, Headphones, Activity, Download } from "lucide-react";
+import { exportAllAdminData, downloadAdminExportAsJson } from "@/utils/adminDataExport";
 import { WebhookEventsManager } from "@/components/WebhookEventsManager";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { PlanStatsCards } from "@/components/admin/PlanStatsCards";
@@ -35,6 +36,7 @@ export default function AdminDashboard() {
   const [stripeApiKey, setStripeApiKey] = useState("");
   const [stripePublishableKey, setStripePublishableKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -253,10 +255,37 @@ export default function AdminDashboard() {
             <Shield className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Ieșire
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  const data = await exportAllAdminData();
+                  if (data) {
+                    const filename = `admin-db-export-${new Date().toISOString().split('T')[0]}.json`;
+                    downloadAdminExportAsJson(data, filename);
+                    toast.success("Bază de date exportată cu succes!");
+                  } else {
+                    toast.error("Nu s-a putut exporta baza de date");
+                  }
+                } catch (error) {
+                  console.error("Export error:", error);
+                  toast.error("Eroare la exportul bazei de date");
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              disabled={exporting}
+            >
+              {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Export DB
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Ieșire
+            </Button>
+          </div>
         </div>
       </header>
 

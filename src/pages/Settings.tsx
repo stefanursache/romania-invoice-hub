@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Building2, KeyRound, User, Cloud, CreditCard, ArrowLeft, Crown } from "lucide-react";
+import { Loader2, Building2, KeyRound, User, Cloud, CreditCard, ArrowLeft, Crown, Download } from "lucide-react";
+import { exportAllUserData, downloadAsJson } from "@/utils/dataExport";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { PlanFeaturesWidget } from "@/components/PlanFeaturesWidget";
@@ -64,6 +65,7 @@ const Settings = () => {
   const [testingSpvCredentials, setTestingSpvCredentials] = useState(false);
   const [spvTestResult, setSpvTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState(tabParam || "company");
+  const [exporting, setExporting] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     company_name: "",
     cui_cif: "",
@@ -431,7 +433,7 @@ const Settings = () => {
           <TabsList className={`grid w-full ${
             isViewingClient 
               ? "grid-cols-2" 
-              : (userRole === "accountant" ? "grid-cols-2" : "grid-cols-6")
+              : (userRole === "accountant" ? "grid-cols-3" : "grid-cols-7")
           }`}>
             {!isViewingClient && userRole !== "accountant" && (
               <TabsTrigger value="company" className="flex items-center gap-2">
@@ -466,6 +468,10 @@ const Settings = () => {
                 <TabsTrigger value="security" className="flex items-center gap-2">
                   <KeyRound className="h-4 w-4" />
                   Securitate
+                </TabsTrigger>
+                <TabsTrigger value="export" className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Export
                 </TabsTrigger>
               </>
             )}
@@ -949,6 +955,48 @@ const Settings = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
+
+          {!isViewingClient && (
+            <TabsContent value="export" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Export date</CardTitle>
+                  <CardDescription>Descarcă toate datele tale într-un fișier JSON</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Exportul va include: profilul companiei, clienții, facturile, articolele de pe facturi, 
+                    cheltuielile, produsele, conturile contabile, mișcările de stoc, extrasele bancare și exporturile SAF-T.
+                  </p>
+                  <Button 
+                    onClick={async () => {
+                      setExporting(true);
+                      try {
+                        const data = await exportAllUserData();
+                        if (data) {
+                          const filename = `smartinvoice-export-${new Date().toISOString().split('T')[0]}.json`;
+                          downloadAsJson(data, filename);
+                          toast.success("Date exportate cu succes!");
+                        } else {
+                          toast.error("Nu s-au putut exporta datele");
+                        }
+                      } catch (error) {
+                        console.error("Export error:", error);
+                        toast.error("Eroare la exportul datelor");
+                      } finally {
+                        setExporting(false);
+                      }
+                    }}
+                    disabled={exporting}
+                  >
+                    {exporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Download className="mr-2 h-4 w-4" />
+                    Descarcă JSON
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
           )}
         </Tabs>
       </div>

@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle, ShieldCheck } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle, ShieldCheck, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
@@ -69,6 +69,7 @@ const Invoices = () => {
   const [validatingSpv, setValidatingSpv] = useState<Record<string, boolean>>({});
   const [spvValidationDialogOpen, setSpvValidationDialogOpen] = useState(false);
   const [spvValidationReport, setSpvValidationReport] = useState<any>(null);
+  const [deletingInvoice, setDeletingInvoice] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadData();
@@ -583,6 +584,40 @@ const Invoices = () => {
     }
   };
 
+  const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string) => {
+    if (!confirm(`Ești sigur că vrei să ștergi factura #${invoiceNumber}? Această acțiune nu poate fi anulată.`)) {
+      return;
+    }
+
+    setDeletingInvoice((prev) => ({ ...prev, [invoiceId]: true }));
+    
+    try {
+      // First delete invoice items
+      const { error: itemsError } = await supabase
+        .from("invoice_items")
+        .delete()
+        .eq("invoice_id", invoiceId);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete the invoice
+      const { error: invoiceError } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", invoiceId);
+
+      if (invoiceError) throw invoiceError;
+
+      toast.success("Factură ștearsă cu succes!");
+      loadData();
+    } catch (error: any) {
+      console.error("Error deleting invoice:", error);
+      toast.error(error.message || "Eroare la ștergerea facturii");
+    } finally {
+      setDeletingInvoice((prev) => ({ ...prev, [invoiceId]: false }));
+    }
+  };
+
   const handleExportCSV = () => {
     const exportData = invoices.map((invoice) => ({
       invoice_type: invoice.invoice_type === "proforma" ? "Pro Forma" : "Factură Fiscală",
@@ -804,47 +839,63 @@ const Invoices = () => {
                           <Download className="h-4 w-4" />
                         )}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadXML(invoice.id)}
-                        disabled={downloadingXml[invoice.id]}
-                        title="Descarcă eFactura XML"
-                      >
-                        {downloadingXml[invoice.id] ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <FileCode className="h-4 w-4" />
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => handleDownloadXML(invoice.id)}
+                         disabled={downloadingXml[invoice.id]}
+                         title="Descarcă eFactura XML"
+                       >
+                         {downloadingXml[invoice.id] ? (
+                           <Loader2 className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <FileCode className="h-4 w-4" />
+                         )}
+                        </Button>
+                        {/* Delete button - shows for owners when invoice is pending approval */}
+                        {userRole === "owner" && invoice.status === "sent" && !invoice.accountant_approved && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteInvoice(invoice.id, invoice.invoice_number)}
+                            disabled={deletingInvoice[invoice.id]}
+                            title="Șterge factură"
+                          >
+                            {deletingInvoice[invoice.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
                         )}
-                       </Button>
-                       {(() => {
-                         const shouldShow = userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent";
-                         console.log(`🔍🔍🔍 Invoice ${invoice.invoice_number} BUTTON CHECK:`, {
-                           userRole: userRole,
-                           userRoleType: typeof userRole,
-                           accountant_approved: invoice.accountant_approved,
-                           status: invoice.status,
-                           condition1: userRole === "accountant",
-                           condition2: !invoice.accountant_approved,
-                           condition3: invoice.status === "sent",
-                           shouldShow: shouldShow
-                         });
-                         return shouldShow;
-                       })() && (
-                         <Button
-                           size="sm"
-                           variant="default"
-                           onClick={() => openApprovalDialog(invoice.id, invoice.invoice_number)}
-                           disabled={approvingInvoice[invoice.id]}
-                           title="Revizie factură"
-                         >
-                           {approvingInvoice[invoice.id] ? (
-                             <Loader2 className="h-4 w-4 animate-spin" />
-                           ) : (
-                             <CheckCircle className="h-4 w-4" />
-                           )}
-                         </Button>
-                       )}
+                        {(() => {
+                          const shouldShow = userRole === "accountant" && !invoice.accountant_approved && invoice.status === "sent";
+                          console.log(`🔍🔍🔍 Invoice ${invoice.invoice_number} BUTTON CHECK:`, {
+                            userRole: userRole,
+                            userRoleType: typeof userRole,
+                            accountant_approved: invoice.accountant_approved,
+                            status: invoice.status,
+                            condition1: userRole === "accountant",
+                            condition2: !invoice.accountant_approved,
+                            condition3: invoice.status === "sent",
+                            shouldShow: shouldShow
+                          });
+                          return shouldShow;
+                        })() && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => openApprovalDialog(invoice.id, invoice.invoice_number)}
+                            disabled={approvingInvoice[invoice.id]}
+                            title="Revizie factură"
+                          >
+                            {approvingInvoice[invoice.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                        {/* Validate for SPV button - shows after accountant approval */}
                        {invoice.accountant_approved && invoice.status !== "paid" && !invoice.spv_sent_at && (
                           <Button

@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Loader2, Package, Plus, Edit, Trash2, TrendingUp, TrendingDown, AlertTriangle, DollarSign, ArrowUpCircle, ArrowDownCircle, Settings as SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
+import { parseNumericInput } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -334,7 +335,7 @@ const Inventory = () => {
                     <Input
                       type="number"
                       value={movementData.quantity}
-                      onChange={(e) => setMovementData({...movementData, quantity: Number(e.target.value)})}
+                      onChange={(e) => setMovementData({...movementData, quantity: parseNumericInput(e.target.value)})}
                     />
                   </div>
                   <div>
@@ -342,7 +343,7 @@ const Inventory = () => {
                     <Input
                       type="number"
                       value={movementData.unit_price}
-                      onChange={(e) => setMovementData({...movementData, unit_price: Number(e.target.value)})}
+                      onChange={(e) => setMovementData({...movementData, unit_price: parseNumericInput(e.target.value)})}
                     />
                   </div>
                   <div>
@@ -438,7 +439,7 @@ const Inventory = () => {
                     <Input
                       type="number"
                       value={formData.minimum_stock}
-                      onChange={(e) => setFormData({...formData, minimum_stock: Number(e.target.value)})}
+                      onChange={(e) => setFormData({...formData, minimum_stock: parseNumericInput(e.target.value)})}
                     />
                   </div>
                   <div>
@@ -446,7 +447,7 @@ const Inventory = () => {
                     <Input
                       type="number"
                       value={formData.purchase_price}
-                      onChange={(e) => setFormData({...formData, purchase_price: Number(e.target.value)})}
+                      onChange={(e) => setFormData({...formData, purchase_price: parseNumericInput(e.target.value)})}
                     />
                   </div>
                   <div>
@@ -454,7 +455,7 @@ const Inventory = () => {
                     <Input
                       type="number"
                       value={formData.sale_price}
-                      onChange={(e) => setFormData({...formData, sale_price: Number(e.target.value)})}
+                      onChange={(e) => setFormData({...formData, sale_price: parseNumericInput(e.target.value)})}
                     />
                   </div>
                   <div>

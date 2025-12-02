@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Trash2, Loader2, Save, Check, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { parseNumericInput } from "@/lib/utils";
 
 interface Client {
   id: string;
@@ -719,7 +720,7 @@ const InvoiceForm = () => {
                           updateLineItem(
                             index,
                             "quantity",
-                            parseFloat(e.target.value) || 0
+                            parseNumericInput(e.target.value)
                           )
                         }
                         min="0"
@@ -736,7 +737,7 @@ const InvoiceForm = () => {
                           updateLineItem(
                             index,
                             "unit_price",
-                            parseFloat(e.target.value) || 0
+                            parseNumericInput(e.target.value)
                           )
                         }
                         min="0"

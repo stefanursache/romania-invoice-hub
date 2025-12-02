@@ -205,38 +205,29 @@ const AccountantDashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-accent p-6 md:p-10 text-primary-foreground">
-          <div className="absolute inset-0 bg-grid-white/10" />
-          <div className="relative z-10">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-              <div className="space-y-3">
-                <Badge variant="secondary" className="gap-2">
-                  <Sparkles className="h-3 w-3" />
-                  Dashboard Contabil
-                </Badge>
-                <h1 className="text-3xl md:text-4xl font-bold">
-                  Bine ai venit înapoi! 👋
-                </h1>
-                <p className="text-sm md:text-base opacity-90 max-w-2xl">
-                  Panou centralizat pentru toate companiile tale
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="secondary" size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export global
-                </Button>
-                <Button variant="secondary" size="sm" className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Rapoarte
-                </Button>
-              </div>
-            </div>
+        {/* Hero Section - Simplified */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl md:text-4xl font-bold">
+              Bine ai venit înapoi! 👋
+            </h1>
+            <p className="text-muted-foreground">
+              Selectează o companie pentru a începe
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Rapoarte
+            </Button>
           </div>
         </div>
 
-        {/* Tabs Navigation */}
+        {/* Tabs Navigation - Company Selection First */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
             <TabsTrigger value="companies" className="gap-2">
@@ -319,132 +310,56 @@ const AccountantDashboard = () => {
           </Card>
         ) : (
           <div className="space-y-8">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            {/* Search, Filter and Sort - Moved to top for immediate access */}
+            {workspaces.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Caută companie după nume sau email..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">Total</Badge>
+                    
+                    <div className="flex gap-3">
+                      <Select value={filterBy} onValueChange={(v) => setFilterBy(v as any)}>
+                        <SelectTrigger className="w-[160px]">
+                          <Filter className="h-4 w-4 mr-2" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-[100]">
+                          <SelectItem value="all">Toate ({workspaces.length})</SelectItem>
+                          <SelectItem value="attention">
+                            Necesită atenție ({workspaces.filter(w => w.stats.draftInvoices > 0).length})
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                        <SelectTrigger className="w-[160px]">
+                          <SortAsc className="h-4 w-4 mr-2" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-[100]">
+                          <SelectItem value="name">Nume (A-Z)</SelectItem>
+                          <SelectItem value="invoices">Facturi (↓)</SelectItem>
+                          <SelectItem value="drafts">Ciorne (↓)</SelectItem>
+                          <SelectItem value="recent">Adăugate recent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold mb-1">{workspaces.length}</div>
-                  <p className="text-xs text-muted-foreground">Companii active</p>
                 </CardContent>
               </Card>
+            )}
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <Badge variant="outline" className="text-xs">Facturi</Badge>
-                  </div>
-                  <div className="text-2xl font-bold mb-1">{totalStats.totalInvoices}</div>
-                  <p className="text-xs text-muted-foreground">Documente totale</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <Badge variant="outline" className="text-xs">Clienți</Badge>
-                  </div>
-                  <div className="text-2xl font-bold mb-1">{totalStats.totalClients}</div>
-                  <p className="text-xs text-muted-foreground">Parteneri business</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                      <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <Badge variant="outline" className="text-xs border-orange-300">Urgent</Badge>
-                  </div>
-                  <div className="text-2xl font-bold mb-1 text-orange-700 dark:text-orange-300">
-                    {totalStats.draftInvoices}
-                  </div>
-                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                    Necesită atenție
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Notifications/Alerts Section */}
-            <AccountantNotifications />
-
-            {/* Search, Filter and Sort */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Caută companie după nume sau email..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <Select value={filterBy} onValueChange={(v) => setFilterBy(v as any)}>
-                      <SelectTrigger className="w-[160px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toate ({workspaces.length})</SelectItem>
-                        <SelectItem value="attention">
-                          Necesită atenție ({workspaces.filter(w => w.stats.draftInvoices > 0).length})
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                      <SelectTrigger className="w-[160px]">
-                        <SortAsc className="h-4 w-4 mr-2" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="name">Nume (A-Z)</SelectItem>
-                        <SelectItem value="invoices">Facturi (↓)</SelectItem>
-                        <SelectItem value="drafts">Ciorne (↓)</SelectItem>
-                        <SelectItem value="recent">Adăugate recent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    {filteredWorkspaces.length} {filteredWorkspaces.length === 1 ? 'companie găsită' : 'companii găsite'}
-                  </p>
-                  {searchQuery && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSearchQuery("")}
-                      className="h-7 text-xs"
-                    >
-                      Resetează căutarea
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Company Cards */}
+            {/* Companies Grid */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredWorkspaces.map((workspace, idx) => (
                 <Card 

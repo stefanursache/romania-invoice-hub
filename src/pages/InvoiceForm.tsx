@@ -148,6 +148,13 @@ const InvoiceForm = () => {
       return;
     }
 
+    // Check if invoice has been sent to SPV - if so, redirect
+    if (invoice.spv_sent_at) {
+      toast.error("Această factură a fost deja trimisă în SPV și nu mai poate fi editată");
+      navigate("/invoices");
+      return;
+    }
+
     const { data: items, error: itemsError } = await supabase
       .from("invoice_items")
       .select("*")
@@ -449,7 +456,9 @@ const InvoiceForm = () => {
               {id ? "Editare factură" : "Factură nouă"}
             </h1>
             <p className="text-muted-foreground">
-              Completează detaliile facturii
+              {id 
+                ? "Modifică detaliile facturii (inclusiv TVA) înainte de trimiterea în SPV" 
+                : "Completează detaliile facturii"}
             </p>
           </div>
         </div>

@@ -13,6 +13,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     totalClients: 0,
     totalInvoices: 0,
+    newInvoices: 0,
     draftInvoices: 0,
     overdueInvoices: 0,
   });
@@ -29,17 +30,23 @@ const Dashboard = () => {
     const activeWorkspaceOwner = sessionStorage.getItem("active_workspace_owner");
     const effectiveUserId = activeWorkspaceOwner || user.id;
 
+    // Get first day of current month
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
     const [clientsRes, invoicesRes] = await Promise.all([
       supabase.from("clients").select("id", { count: "exact" }).eq("user_id", effectiveUserId),
-      supabase.from("invoices").select("status", { count: "exact" }).eq("user_id", effectiveUserId),
+      supabase.from("invoices").select("status, created_at", { count: "exact" }).eq("user_id", effectiveUserId),
     ]);
 
     const draftCount = invoicesRes.data?.filter(inv => inv.status === "draft").length || 0;
     const overdueCount = invoicesRes.data?.filter(inv => inv.status === "overdue").length || 0;
+    const newCount = invoicesRes.data?.filter(inv => inv.created_at >= firstDayOfMonth).length || 0;
 
     setStats({
       totalClients: clientsRes.count || 0,
       totalInvoices: invoicesRes.count || 0,
+      newInvoices: newCount,
       draftInvoices: draftCount,
       overdueInvoices: overdueCount,
     });
@@ -47,32 +54,32 @@ const Dashboard = () => {
 
   const statCards = [
     {
-      title: "Total Clienți",
-      value: stats.totalClients,
-      icon: Users,
-      color: "text-primary",
-      link: "/clients",
-    },
-    {
       title: "Total Facturi",
       value: stats.totalInvoices,
       icon: FileText,
-      color: "text-accent",
+      color: "text-primary",
       link: "/invoices",
+    },
+    {
+      title: "Facturi Noi (luna asta)",
+      value: stats.newInvoices,
+      icon: TrendingUp,
+      color: "text-accent",
+      link: "/invoices?filter=new",
     },
     {
       title: "Ciorne",
       value: stats.draftInvoices,
       icon: Clock,
-      color: "text-muted-foreground",
-      link: "/invoices",
+      color: "text-orange-600 dark:text-orange-400",
+      link: "/invoices?filter=draft",
     },
     {
-      title: "Restanțe",
-      value: stats.overdueInvoices,
-      icon: TrendingUp,
-      color: "text-destructive",
-      link: "/invoices",
+      title: "Total Clienți",
+      value: stats.totalClients,
+      icon: Users,
+      color: "text-muted-foreground",
+      link: "/clients",
     },
   ];
 

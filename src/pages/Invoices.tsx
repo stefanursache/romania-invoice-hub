@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle, ShieldCheck, Trash2, Edit } from "lucide-react";
+import { Plus, FileText, Eye, Download, FileCode, Loader2, FileSpreadsheet, ImagePlus, Send, CheckCircle, ShieldCheck, Trash2, Edit, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
@@ -70,6 +70,7 @@ const Invoices = () => {
   const [spvValidationDialogOpen, setSpvValidationDialogOpen] = useState(false);
   const [spvValidationReport, setSpvValidationReport] = useState<any>(null);
   const [deletingInvoice, setDeletingInvoice] = useState<Record<string, boolean>>({});
+  const [creatingStorno, setCreatingStorno] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadData();
@@ -171,6 +172,8 @@ const Invoices = () => {
         return "bg-primary text-primary-foreground";
       case "overdue":
         return "bg-destructive text-destructive-foreground";
+      case "storno_issued":
+        return "bg-orange-500 text-white";
       default:
         return "bg-muted text-muted-foreground";
     }
@@ -186,6 +189,8 @@ const Invoices = () => {
         return "Plătită";
       case "overdue":
         return "Restanță";
+      case "storno_issued":
+        return "Stornată";
       default:
         return status;
     }
@@ -618,9 +623,115 @@ const Invoices = () => {
     }
   };
 
+  const handleCreateStorno = async (invoiceId: string, invoiceNumber: string) => {
+    if (!confirm(`Ești sigur că vrei să creezi un storno pentru factura #${invoiceNumber}? Aceasta va genera o factură cu valori negative.`)) {
+      return;
+    }
+
+    setCreatingStorno((prev) => ({ ...prev, [invoiceId]: true }));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Nu ești autentificat");
+        return;
+      }
+
+      // Fetch the original invoice
+      const { data: originalInvoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("id", invoiceId)
+        .single();
+
+      if (invoiceError || !originalInvoice) {
+        throw new Error("Eroare la încărcarea facturii originale");
+      }
+
+      // Fetch original invoice items
+      const { data: originalItems, error: itemsError } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", invoiceId);
+
+      if (itemsError) {
+        throw new Error("Eroare la încărcarea produselor/serviciilor");
+      }
+
+      // Generate storno invoice number
+      const stornoNumber = `STORNO-${invoiceNumber}`;
+
+      // Create the storno invoice with negative values
+      const { data: stornoInvoice, error: createError } = await supabase
+        .from("invoices")
+        .insert({
+          user_id: originalInvoice.user_id,
+          client_id: originalInvoice.client_id,
+          invoice_number: stornoNumber,
+          invoice_type: "storno",
+          issue_date: new Date().toISOString().split("T")[0],
+          due_date: new Date().toISOString().split("T")[0],
+          subtotal: -Math.abs(Number(originalInvoice.subtotal)),
+          vat_amount: -Math.abs(Number(originalInvoice.vat_amount)),
+          total: -Math.abs(Number(originalInvoice.total)),
+          currency: originalInvoice.currency,
+          language: originalInvoice.language,
+          status: "sent",
+          notes: `Storno pentru factura #${invoiceNumber}`,
+          accountant_approved: false
+        })
+        .select()
+        .single();
+
+      if (createError || !stornoInvoice) {
+        throw createError || new Error("Eroare la crearea facturii storno");
+      }
+
+      // Create storno invoice items with negative values
+      if (originalItems && originalItems.length > 0) {
+        const stornoItems = originalItems.map((item) => ({
+          invoice_id: stornoInvoice.id,
+          description: item.description,
+          quantity: -Math.abs(Number(item.quantity)),
+          unit_price: Number(item.unit_price),
+          vat_rate: item.vat_rate,
+          subtotal: -Math.abs(Number(item.subtotal)),
+          vat_amount: -Math.abs(Number(item.vat_amount)),
+          total: -Math.abs(Number(item.total))
+        }));
+
+        const { error: itemsCreateError } = await supabase
+          .from("invoice_items")
+          .insert(stornoItems);
+
+        if (itemsCreateError) {
+          throw itemsCreateError;
+        }
+      }
+
+      // Mark the original invoice as storno issued
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({ status: "storno_issued" })
+        .eq("id", invoiceId);
+
+      if (updateError) {
+        console.error("Error updating original invoice status:", updateError);
+      }
+
+      toast.success(`Storno creat cu succes! Nr: ${stornoNumber}`);
+      loadData();
+    } catch (error: any) {
+      console.error("Error creating storno:", error);
+      toast.error(error.message || "Eroare la crearea facturii storno");
+    } finally {
+      setCreatingStorno((prev) => ({ ...prev, [invoiceId]: false }));
+    }
+  };
+
   const handleExportCSV = () => {
     const exportData = invoices.map((invoice) => ({
-      invoice_type: invoice.invoice_type === "proforma" ? "Pro Forma" : "Factură Fiscală",
+      invoice_type: invoice.invoice_type === "proforma" ? "Pro Forma" : invoice.invoice_type === "storno" ? "Storno" : "Factură Fiscală",
       invoice_number: invoice.invoice_number,
       issue_date: invoice.issue_date,
       due_date: invoice.due_date,
@@ -764,11 +875,16 @@ const Invoices = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CardTitle className="text-xl">
-                        {invoice.invoice_type === "proforma" ? "Proformă" : "Factură"} #{invoice.invoice_number}
+                        {invoice.invoice_type === "proforma" ? "Proformă" : invoice.invoice_type === "storno" ? "Storno" : "Factură"} #{invoice.invoice_number}
                       </CardTitle>
                       {invoice.invoice_type === "proforma" && (
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
                           PRO FORMA
+                        </Badge>
+                      )}
+                      {invoice.invoice_type === "storno" && (
+                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+                          STORNO
                         </Badge>
                       )}
                     </div>
@@ -877,6 +993,23 @@ const Invoices = () => {
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        {/* Storno button - shows for owners when invoice hasn't been sent to SPV and is not already a storno */}
+                        {userRole === "owner" && !invoice.spv_sent_at && invoice.invoice_type !== "storno" && invoice.status !== "storno_issued" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCreateStorno(invoice.id, invoice.invoice_number)}
+                            disabled={creatingStorno[invoice.id]}
+                            title="Emite storno"
+                            className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                          >
+                            {creatingStorno[invoice.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4" />
                             )}
                           </Button>
                         )}

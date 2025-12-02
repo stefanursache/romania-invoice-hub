@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Loader2, Plus, RefreshCw, CheckCircle, XCircle, TestTube, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { parseNumericInput } from "@/lib/utils";
 
 export function StripePlanManager() {
   const [loading, setLoading] = useState(false);
@@ -271,7 +272,7 @@ export function StripePlanManager() {
                 type="number"
                 placeholder="e.g., 29.99"
                 value={newPrice.amount}
-                onChange={(e) => setNewPrice({ ...newPrice, amount: e.target.value })}
+                onChange={(e) => setNewPrice({ ...newPrice, amount: parseNumericInput(e.target.value).toString() })}
               />
             </div>
             <div className="space-y-2">

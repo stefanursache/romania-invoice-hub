@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
+import { parseNumericInput } from "@/lib/utils";
 
 interface Client {
   id: string;
@@ -195,7 +196,7 @@ const Clients = () => {
                       id="payment_terms"
                       type="number"
                       value={formData.payment_terms}
-                      onChange={(e) => setFormData({ ...formData, payment_terms: parseInt(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, payment_terms: parseNumericInput(e.target.value) })}
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">

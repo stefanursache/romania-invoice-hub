@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { parseNumericInput } from "@/lib/utils";
 
 interface ExtractedReceiptData {
   expense_date: string;
@@ -300,7 +301,7 @@ export const ReceiptUpload = ({ onSuccess }: ReceiptUploadProps) => {
                         type="number"
                         step="0.01"
                         value={editedData.amount || extractedData.amount}
-                        onChange={(e) => setEditedData({ ...editedData, amount: parseFloat(e.target.value) })}
+                        onChange={(e) => setEditedData({ ...editedData, amount: parseNumericInput(e.target.value) })}
                       />
                     </div>
                     <div>
@@ -310,7 +311,7 @@ export const ReceiptUpload = ({ onSuccess }: ReceiptUploadProps) => {
                         type="number"
                         step="0.01"
                         value={editedData.vat_amount || extractedData.vat_amount}
-                        onChange={(e) => setEditedData({ ...editedData, vat_amount: parseFloat(e.target.value) })}
+                        onChange={(e) => setEditedData({ ...editedData, vat_amount: parseNumericInput(e.target.value) })}
                       />
                     </div>
                     <div>
